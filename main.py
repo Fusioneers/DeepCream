@@ -1,7 +1,13 @@
-from CloudFilter import *
+import cv2
+from cloud_detection.cloud_filter import CloudFilter
 
-cf = CloudFilter()
+cf = CloudFilter(weight_ai=0.8)
 
-print(cf.load_image('./test-data/image0.jpg'))
+clouds, mask = cf.evaluate_image('./sample_data/image1.jpg')
 
-print(cf.evaluate_image('./processed-data/'))
+while True:
+    cv2.imshow('Clouds', clouds)
+    cv2.imshow('Mask', mask)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
