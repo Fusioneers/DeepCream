@@ -78,11 +78,27 @@ class CloudFilter:
 
         # Create the image mask to filter out everything but the clouds
         hsv = cv2.cvtColor(adjusted, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, lower, upper)
+        rough_mask = cv2.inRange(hsv, lower, upper)
+        hsv = cv2.bitwise_and(hsv, hsv, mask=rough_mask)
 
-        return mask
+        # Create an empty mask with the right dimensions
+        fine_mask = np.zeros(hsv.shape, hsv.dtype)
 
-    def evaluate_image(self, image_path):
+        # Calculate for each pixel how likely it is to be a cloud and five it back as a mask
+        for y in range(hsv.shape[0]):
+            for x in range(hsv.shape[1]):
+                # TODO RuntimeWarning: overflow encountered in ubyte_scalars ??
+                hue = (hsv[y, x, 0] > 0) * np.clip(255 - (hsv[:, :, 0].max()-hsv[y, x, 2]), 0, 255)
+
+                saturation = (hsv[y, x, 1] > 0) * np.clip(255 - (hsv[y, x, 1]), 0, 255)
+
+                value = np.clip(255 + hsv[y, x, 2] - self.vMax, 0, 255)
+
+                fine_mask[y, x] = [hue, saturation, value]
+
+        return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
+
+    def evaluate_image(self, image_path, dark="Too dark"):
         normal, scaled, gray = self.load_image(image_path)
 
         if normal is None or scaled is None or gray is None:
@@ -90,7 +106,7 @@ class CloudFilter:
 
         # Check if the image is overall to dark
         if gray.mean() < self.nightThreshold:
-            return "Too dark"
+            return dark
 
         # Compute the two masks
         ai_mask = self.ai_generate_image_mask(scaled)
