@@ -1,4 +1,6 @@
 # Don't send the file with the test images sinces this takes too long
+sample_data/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

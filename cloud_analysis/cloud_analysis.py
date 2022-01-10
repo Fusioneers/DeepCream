@@ -1,15 +1,9 @@
 import cv2 as cv
 import numpy as np
 import os
-from CloudDetection.CloudFilter import CloudFilter
+from cloud_detection.cloud_filter import CloudFilter
 
 path = os.path.realpath(__file__).removesuffix(r'\CloudAnalysis\CloudAnalysis.py')
-
-cf = CloudFilter()
-
-cf.load_image('./test-data/image0.jpg')
-
-cf.evaluate_image('./processed-data/')
 
 
 class Cloud:
@@ -35,7 +29,11 @@ class Cloud:
     def analyze_cloud(self):
         print(self.size)
 
-def rescale_image(lines, orig):
+
+def rescale_image(mask, orig):
+    width, height, channels = orig.shape
+    lines_re = cv.resize(mask, (width, height))
+    return cv.bitwise_and(mask, orig)
 
 
 def get_clouds(img, min_area):
@@ -46,3 +44,10 @@ def get_clouds(img, min_area):
         area = cv.contourArea(cnt)
         if area > min_area:
             new_contours.append(cnt)
+    cv.imshow('', cv.drawContours(img, new_contours, -1, (255, 255, 255), -1))
+
+
+if __name__ == '__main__':
+    cf = CloudFilter()
+    cf.load_image(path + '/sample_data/Data/zz_astropi_1_photo_364.jpg')
+    mask, color_image = cf.evaluate_image(path + '/cloud_analysis/')
