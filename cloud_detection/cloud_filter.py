@@ -3,6 +3,9 @@ import numpy as np
 from numpy import asarray
 from PIL import Image
 from cloud_detection.unet_model import unet_model
+import os
+
+path = os.path.realpath(__file__).removesuffix('cloud_filter.py')
 
 
 class CloudFilter:
@@ -35,7 +38,7 @@ class CloudFilter:
         self.WIDTH = 128 * 2
         self.CHANNELS = 3
         self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
-        self.model.load_weights('./cloud_detection/clouds_test.hdf5')
+        self.model.load_weights(path + 'clouds_test.hdf5')
 
     def load_image(self, image_path):
         normal = cv2.resize(cv2.imread(image_path), (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
