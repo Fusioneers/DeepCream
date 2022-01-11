@@ -1,6 +1,5 @@
 import os
 import time
-
 import cv2 as cv
 import numpy as np
 
@@ -9,29 +8,54 @@ path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.
 NUM_CLOUDS = 5
 
 
+def plot(img):
+    cv.imshow('', cv.resize(img, (int(orig.shape[1] / 4), int(orig.shape[0] / 4))))
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+
+
 class Cloud:
 
     def __init__(self, orig, contour):
         self.width, self.height, self.channels = orig.shape
+
         self.contour = contour
+        self.contour_perimeter = cv.arcLength(self.contour, True)
+        self.contour_area = cv.contourArea(self.contour)
+        self.hull = cv.convexHull(self.contour)
+        self.hull_perimeter = cv.arcLength(self.hull, True)
+        self.hull_area = cv.contourArea(self.hull)
+
         self.orig = orig
         self.mask = np.zeros(self.orig.shape[:2], np.uint8)
-        self.size = cv.contourArea(contour)
 
         cv.drawContours(self.mask, [self.contour], 0, (255, 255, 255), -1)
+
         self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
 
         # self.plot(self.mask)
         # self.plot(self.orig)
         # self.plot(self.img)
 
-    def plot(self, img):
-        cv.imshow('', cv.resize(img, (int(orig.shape[1] / 4), int(orig.shape[0] / 4))))
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+    def get_circularity(self):
+        return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
 
-    def get_form(self):
-        pass
+    def get_rectangularity(self):
+        (x, y), (width, height), angle = cv.minAreaRect(self.contour)
+        return self.contour_area / (width * height)
+
+    def get_convexity(self):
+        return self.hull_perimeter / self.contour_perimeter
+
+    def get_compactness(self):
+        return (4 * np.pi * self.contour_area) / (self.contour_perimeter ** 2)
+
+    def get_solidity(self):
+        return self.contour_area / self.hull_area
+
+    def get_elongation(self):
+        (x, y), (width, height), angle = cv.minAreaRect(self.contour)
+        return min(width, height) / max(width, height)
 
     def get_texture(self):
         pass
@@ -73,6 +97,13 @@ if __name__ == '__main__':
     contours = get_contours(mask_re, NUM_CLOUDS)
     clouds = [Cloud(orig, contour) for contour in contours]
 
-    print(time.time() - dtime)
+    # print(time.time() - dtime)
     for cloud in clouds:
-        cloud.plot(cloud.img)
+        print('#######################')
+        print(f'circularity: {cloud.get_circularity()}')
+        print(f'rectangularity: {cloud.get_rectangularity()}')
+        print(f'convexity: {cloud.get_convexity()}')
+        print(f'compactness: {cloud.get_compactness()}')
+        print(f'solidity: {cloud.get_solidity()}')
+        print(f'elongation: {cloud.get_elongation()}')
+        plot(cloud.img)
