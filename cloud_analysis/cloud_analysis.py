@@ -1,8 +1,8 @@
-import cv2 as cv
-import numpy as np
 import os
 import time
-from cloud_detection.cloud_filter import CloudFilter
+
+import cv2 as cv
+import numpy as np
 
 path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.py')
 
@@ -15,16 +15,15 @@ class Cloud:
         self.width, self.height, self.channels = orig.shape
         self.contour = contour
         self.orig = orig
-        self.mask = cv.drawContours(np.zeros(list(self.orig.shape)), [self.contour], 0, (255, 255, 255), -1)
-        # self.mask = self.mask[:, :, 0]
-        #self.mask = cv.cvtColor(self.mask, cv.COLOR_BGR2GRAY)
-        print(self.mask.shape)
-        print(self.orig.shape)
-        self.plot(self.mask)
-        self.mask = self.mask.astype('int')
-        self.plot(self.orig)
-        self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
+        self.mask = np.zeros(self.orig.shape[:2], np.uint8)
         self.size = cv.contourArea(contour)
+
+        cv.drawContours(self.mask, [self.contour], 0, (255, 255, 255), -1)
+        self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
+
+        # self.plot(self.mask)
+        # self.plot(self.orig)
+        # self.plot(self.img)
 
     def plot(self, img):
         cv.imshow('', cv.resize(img, (int(orig.shape[1] / 4), int(orig.shape[0] / 4))))
