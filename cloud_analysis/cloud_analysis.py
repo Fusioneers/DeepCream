@@ -3,13 +3,19 @@ import time
 import cv2 as cv
 import numpy as np
 import skimage
+import matplotlib.pyplot as plt
 
 path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.py')
 
+# Constants
 NUM_CLOUDS = 5
-DISTANCE = 1
+DISTANCE = 50
 ANGLE = np.pi / 4
 
+
+# for more detailed explanation of the outputs of the methods
+# see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
+# and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
 def plot(img):
     cv.imshow('', cv.resize(img, (int(orig.shape[1] / 4), int(orig.shape[0] / 4))))
@@ -20,11 +26,6 @@ def plot(img):
 class Cloud:
 
     def __init__(self, orig, contour):
-        self.width, self.height, self.channels = orig.shape
-
-        # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
-        # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
-
         self.contour = contour
         self.contour_perimeter = cv.arcLength(self.contour, True)
         self.contour_area = cv.contourArea(self.contour)
@@ -40,20 +41,13 @@ class Cloud:
         self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
         self.img_grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
 
-        # graylevel coocurrence matrix
+        # graylevel co-ocurrence matrix
         self.glcm = skimage.feature.graycomatrix(self.img_grey, [DISTANCE], [ANGLE], normed=True)[:, :, 0, 0]
         self.glcm = self.glcm[1:, 1:]
-        i, j = np.indices(self.glcm.shape)
-        # greylevel distance statistic
-        self.glds = []
-        for n in range(256):
-            idx = [[x, n - x] for x in range(n + 1)]
-            idx = np.array(idx)
-            print(self.glcm[idx[:, 0], idx[:1]])
-            #self.glds.append(self.glcm[idx[:][0], idx[:][1]])
-        print(self.glds.shape)
+
+        # greylevel distance statistics
+        self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
         self.glds = self.glds / np.sum(self.glds)
-        print(self.glds)
 
     def get_circularity(self):
         return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
@@ -82,10 +76,13 @@ class Cloud:
         _, stddev = cv.meanStdDev(self.img, mask=self.mask)
         return stddev
 
-    def get_contrast(self):
+    def get_glcm_contrast(self):
         i, j = np.indices(self.glcm.shape)
         coefficients = ((i - j) ** 2).astype(int)
         return np.sum(coefficients * self.glcm)
+
+    def get_glds_mean(self):
+        return np.mean(self.glds)
 
     def get_transparency(self):
         pass
@@ -140,6 +137,15 @@ if __name__ == '__main__':
         print('Texture Analysis:')
         print(f'mean: {cloud.get_mean()}')
         print(f'standard deviation: {cloud.get_standard_deviation()}')
-        print(f'contrast: {cloud.get_contrast()}')
+        print(f'glcm contrast:\n{cloud.get_glcm_contrast()}')
+        print(f'glds mean:\n{cloud.get_glds_mean()}')
         print('\n#######################################\n')
+        plt.plot(range(len(cloud.glds)), cloud.glds,
+                 label='relative occurrence within cloud')
+        plt.plot(range(len(np.diff(cloud.glds))), np.diff(cloud.glds),
+                 label='difference of relative occurrences within cloud')
+        plt.title('Greylevel Distance Statistics')
+        plt.xlabel('greyscale distance')
+        plt.legend()
+        plt.show()
         plot(cloud.img)
