@@ -14,6 +14,10 @@ NUM_ANGLES = 8
 ANGLES = np.arange(0, 2 * np.pi, np.pi / NUM_ANGLES * 2)
 
 
+# TODO documentation
+
+# TODO rename properly
+
 # for more detailed explanation of the outputs of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
@@ -84,16 +88,12 @@ class Cloud:
         return np.sum(coefficients * self.glcm)
 
     def get_glds_median(self):
+        # TODO get a meaningful value
         return np.std(self.glds)
 
-    def get_transparency(self):
-        pass
-
-    def get_edges(self):
-        pass
-
-    def analyze_cloud(self):
-        pass
+    # TODO transparancy
+    # TODO edges
+    # TODO interpretation
 
 
 def rescale_image(mask, orig):
