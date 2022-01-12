@@ -9,8 +9,9 @@ path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.
 
 # Constants
 NUM_CLOUDS = 5
-DISTANCE = 50
-ANGLE = np.pi / 4
+DISTANCE = 20
+NUM_ANGLES = 8
+ANGLES = np.arange(0, 2 * np.pi, np.pi / NUM_ANGLES * 2)
 
 
 # for more detailed explanation of the outputs of the methods
@@ -42,7 +43,8 @@ class Cloud:
         self.img_grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
 
         # graylevel co-ocurrence matrix
-        self.glcm = skimage.feature.graycomatrix(self.img_grey, [DISTANCE], [ANGLE], normed=True)[:, :, 0, 0]
+        self.glcm = skimage.feature.graycomatrix(self.img_grey, [DISTANCE], ANGLES, normed=True)[:, :, 0, :]
+        self.glcm = np.mean(self.glcm, axis=2)
         self.glcm = self.glcm[1:, 1:]
 
         # greylevel distance statistics
@@ -81,8 +83,8 @@ class Cloud:
         coefficients = ((i - j) ** 2).astype(int)
         return np.sum(coefficients * self.glcm)
 
-    def get_glds_mean(self):
-        return np.mean(self.glds)
+    def get_glds_median(self):
+        return np.std(self.glds)
 
     def get_transparency(self):
         pass
@@ -124,7 +126,7 @@ if __name__ == '__main__':
     # print(time.time() - dtime)
     print('\n#######################################\n')
     for cloud in clouds:
-        print('Shape Analysis:')
+        print('Shape Analysis:\n')
         print(f'contour area: {cloud.contour_area}')
         print(f'hull area: {cloud.hull_area}')
         print(f'circularity: {cloud.get_circularity()}')
@@ -134,11 +136,11 @@ if __name__ == '__main__':
         print(f'solidity: {cloud.get_solidity()}')
         print(f'elongation: {cloud.get_elongation()}')
         print('\n---------------------------------------\n')
-        print('Texture Analysis:')
+        print('Texture Analysis:\n')
         print(f'mean: {cloud.get_mean()}')
         print(f'standard deviation: {cloud.get_standard_deviation()}')
         print(f'glcm contrast:\n{cloud.get_glcm_contrast()}')
-        print(f'glds mean:\n{cloud.get_glds_mean()}')
+        print(f'glds median:\n{cloud.get_glds_median()}')
         print('\n#######################################\n')
         plt.plot(range(len(cloud.glds)), cloud.glds,
                  label='relative occurrence within cloud')
