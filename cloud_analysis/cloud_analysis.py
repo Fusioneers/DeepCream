@@ -10,8 +10,7 @@ path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.
 # Constants
 NUM_CLOUDS = 5
 DISTANCE = 20
-NUM_ANGLES = 8
-ANGLES = np.arange(0, 2 * np.pi, np.pi / NUM_ANGLES * 2)
+NUM_ANGLES = 4
 
 
 # TODO documentation
@@ -47,6 +46,7 @@ class Cloud:
         self.img_grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
 
         # graylevel co-ocurrence matrix
+        ANGLES = np.arange(0, 2 * np.pi, np.pi / NUM_ANGLES * 2)
         self.glcm = skimage.feature.graycomatrix(self.img_grey, [DISTANCE], ANGLES, normed=True)[:, :, 0, :]
         self.glcm = np.mean(self.glcm, axis=2)
         self.glcm = self.glcm[1:, 1:]
@@ -54,6 +54,7 @@ class Cloud:
         # greylevel distance statistics
         self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
         self.glds = self.glds / np.sum(self.glds)
+        self.glds_diff = np.diff(self.glds)
 
     def get_circularity(self):
         return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
@@ -87,11 +88,14 @@ class Cloud:
         coefficients = ((i - j) ** 2).astype(int)
         return np.sum(coefficients * self.glcm)
 
-    def get_glds_median(self):
-        # TODO get a meaningful value
-        return np.std(self.glds)
+    def get_glds_skewness(self):
+        level = 0
+        for i, val in enumerate(self.glds):
+            level += val
+            if level >= 0.5:
+                return i
 
-    # TODO transparancy
+    # TODO transparency
     # TODO edges
     # TODO interpretation
 
@@ -123,7 +127,6 @@ if __name__ == '__main__':
     contours = get_contours(mask_re)
     clouds = [Cloud(orig, contour) for contour in contours]
 
-    # print(time.time() - dtime)
     print('\n#######################################\n')
     for cloud in clouds:
         print('Shape Analysis:\n')
@@ -140,14 +143,16 @@ if __name__ == '__main__':
         print(f'mean: {cloud.get_mean()}')
         print(f'standard deviation: {cloud.get_standard_deviation()}')
         print(f'glcm contrast:\n{cloud.get_glcm_contrast()}')
-        print(f'glds median:\n{cloud.get_glds_median()}')
+        print(f'glds skewness:\n{cloud.get_glds_skewness()}')
         print('\n#######################################\n')
         plt.plot(range(len(cloud.glds)), cloud.glds,
                  label='relative occurrence within cloud')
-        plt.plot(range(len(np.diff(cloud.glds))), np.diff(cloud.glds),
+        plt.plot(range(len(cloud.glds_diff)), cloud.glds_diff,
                  label='difference of relative occurrences within cloud')
         plt.title('Greylevel Distance Statistics')
         plt.xlabel('greyscale distance')
         plt.legend()
         plt.show()
         plot(cloud.img)
+
+print(f'computation time:  {time.time() - dtime}')

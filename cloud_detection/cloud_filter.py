@@ -9,7 +9,8 @@ path = os.path.realpath(__file__).removesuffix('cloud_filter.py')
 
 
 class CloudFilter:
-    def __init__(self, night_threshold=20, cloudless_threshold=0.02, binary_cloud_threshold=100, h_min=0, h_max=179, s_min=0, s_max=50, v_min=145,
+    def __init__(self, night_threshold=20, cloudless_threshold=0.02, binary_cloud_threshold=100, h_min=0, h_max=179,
+                 s_min=0, s_max=50, v_min=145,
                  v_max=255, contrast=1, brightness=0, blur=3, weight_ai=0.7):
 
         # Thresholds for stopping the image processing
@@ -59,10 +60,10 @@ class CloudFilter:
     def ai_generate_image_mask(self, original):
         # Let the ai predict where the clouds are
         pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT, self.WIDTH, 1))
-        
+
         # Convert the prediction to a mask
         mask = cv2.normalize(pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-        
+
         return mask
 
     def cv2_generate_image_mask(self, original):
@@ -91,7 +92,7 @@ class CloudFilter:
         for y in range(hsv.shape[0]):
             for x in range(hsv.shape[1]):
                 # TODO RuntimeWarning: overflow encountered in ubyte_scalars ??
-                hue = (hsv[y, x, 0] > 0) * np.clip(255 - (hsv[:, :, 0].max()-hsv[y, x, 2]), 0, 255)
+                hue = (hsv[y, x, 0] > 0) * np.clip(255 - (hsv[:, :, 0].max() - hsv[y, x, 2]), 0, 255)
 
                 saturation = (hsv[y, x, 1] > 0) * np.clip(255 - (hsv[y, x, 1]), 0, 255)
 
@@ -116,7 +117,7 @@ class CloudFilter:
         hsv_mask = self.cv2_generate_image_mask(normal)
 
         # Combine the two masks according
-        mask = cv2.addWeighted(ai_mask, self.weightAi, hsv_mask, (1-self.weightAi), 0.0)
+        mask = cv2.addWeighted(ai_mask, self.weightAi, hsv_mask, (1 - self.weightAi), 0.0)
 
         # Normalize the resulting maks and make it binary
         mask = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
