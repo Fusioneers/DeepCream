@@ -11,22 +11,21 @@ from cloud_detection.cloud_filter import CloudFilter
 
 class Analysis:
 
-    def __init__(self, orig_path, num_clouds, distance, num_glcm):
+    def __init__(self, orig, num_clouds, distance, num_glcm):
         """
 
-        :param orig_path: the path to the image you want to analyse
+        :param orig: the image you want to analyse
         :param num_clouds: the number of largest clouds you want to analyse
-        :param distance: the length of the offset vector for a GLCM
+        :param distance: the length of the offset vector for the GLCMs
         :param num_glcm: number of GLCM averaged with rotated offset vectors
         """
 
-        self.orig_path = orig_path
-        self.orig = cv.imread(self.orig_path)
+        self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
 
         # in this part the intelligent mask for the clouds is created and the clouds are separated
         cloud_filter = CloudFilter()
-        mask, _ = cloud_filter.evaluate_image(cv.imread(orig_path))
+        mask, _ = cloud_filter.evaluate_image(orig)
         mask_re = cv.resize(mask, (self.width, self.height))
 
         all_contours, _ = cv.findContours(cv.medianBlur(mask_re, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
@@ -37,13 +36,14 @@ class Analysis:
         # this is a list from the num_clouds largest clouds which are objects of the type Cloud
         self.clouds = []
         for contour in self.contours:
-            mask = np.zeros((self.height, self.width), np.uint8)
+            mask = np.zeros((self.height, bself.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             self.clouds.append(self.Cloud(img, mask, contour, distance, num_glcm))
 
     def __str__(self):
-        return f'original image path: {self.orig_path}\nnumber of clouds: {len(self.clouds)}'
+        # TODO more information?
+        return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
         def __init__(self, img, mask, contour, distance, num_glcm):
@@ -51,7 +51,7 @@ class Analysis:
 
             :param img: The image of the cloud. while the background is black only the cloud itself has color.
             :param contour: list of the points that describe the border of the cloud
-            :param distance: the length of the offset vector for a GLCM
+            :param distance: the length of the offset vector for the GLCMs
             :param num_glcm: number of GLCMs averaged with rotated offset vectors
             """
 
@@ -63,7 +63,7 @@ class Analysis:
             self.texture = self.Texture(self.img, self.mask, distance, num_glcm)
 
         def __str__(self):
-            return f'image dimensions: {self.img.shape}'
+            return f'dimensions: {self.img.shape}'
 
         class Shape:
 

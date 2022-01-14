@@ -8,7 +8,7 @@ path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\get_analysis_dat
 # TODO get data for a lot of images and compare features for hopefully meaningful results
 
 
-img_path = path + r'sample_data\Data\zz_astropi_1_photo_252.jpg'
+img_path = path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'
 num_clouds = 5
 distance = 20
 num_angles = 16
@@ -22,7 +22,7 @@ def plot(img):
 
 dtime = time.time()
 
-analysis = Analysis(img_path, num_clouds, distance, num_angles)
+analysis = Analysis(cv.imread(img_path), num_clouds, distance, num_angles)
 print('finished constructing')
 
 print('\n################################\n')
