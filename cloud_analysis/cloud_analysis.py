@@ -36,7 +36,7 @@ class Analysis:
         # this is a list from the num_clouds largest clouds which are objects of the type Cloud
         self.clouds = []
         for contour in self.contours:
-            mask = np.zeros((self.height, bself.width), np.uint8)
+            mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             self.clouds.append(self.Cloud(img, mask, contour, distance, num_glcm))
