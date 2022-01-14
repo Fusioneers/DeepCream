@@ -4,7 +4,7 @@ import skimage
 from cloud_detection.cloud_filter import CloudFilter
 
 
-# for more detailed explanation of the outputs of the methods
+# for more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
@@ -60,7 +60,7 @@ class Analysis:
             self.contour = contour
 
             self.shape = self.Shape(self.contour)
-            self.texture = self.Texture(self.img, self.mask, distance, num_glcm)
+            self.texture = self.Color(self.img, self.mask, distance, num_glcm)
 
         def __str__(self):
             return f'dimensions: {self.img.shape}'
@@ -109,7 +109,7 @@ class Analysis:
                 _, (width, height), angle = cv.minAreaRect(self.contour)
                 return min(width, height) / max(width, height)
 
-        class Texture:
+        class Color:
             def __init__(self, img, mask, distance, num_glcm):
                 self.img = img
                 self.mask = mask
@@ -126,7 +126,7 @@ class Analysis:
                 self.glds = self.glds / np.sum(self.glds)
 
             def __str__(self):
-                out = ['Texture Analysis:\n',
+                out = ['Color Analysis:\n',
                        f'    mean: {self.mean()}',
                        f'    standard deviation: {self.std()}',
                        f'    contrast: {self.contrast()}',
@@ -140,6 +140,7 @@ class Analysis:
 
             def std(self):
                 _, std = cv.meanStdDev(self.img, mask=self.mask)
+                std = (std[0][0], std[1][0], std[2][0])
                 return std
 
             def contrast(self):
