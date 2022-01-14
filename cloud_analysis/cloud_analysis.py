@@ -1,158 +1,133 @@
-import os
-import time
 import cv2 as cv
 import numpy as np
 import skimage
-import matplotlib.pyplot as plt
+from cloud_detection.cloud_filter import CloudFilter
 
-path = os.path.realpath(__file__).removesuffix(r'\cloud_analysis\cloud_analysis.py')
-
-# Constants
-NUM_CLOUDS = 5
-DISTANCE = 20
-NUM_ANGLES = 4
-
-
-# TODO documentation
-
-# TODO rename properly
 
 # for more detailed explanation of the outputs of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
-def plot(img):
-    cv.imshow('', cv.resize(img, (int(orig.shape[1] / 4), int(orig.shape[0] / 4))))
-    cv.waitKey(0)
-    cv.destroyAllWindows()
 
+class Analysis:
 
-class Cloud:
+    def __init__(self, orig_path, num_clouds, distance, num_angles):
+        self.orig = cv.imread(orig_path)
 
-    def __init__(self, orig, contour):
-        self.contour = contour
-        self.contour_perimeter = cv.arcLength(self.contour, True)
-        self.contour_area = cv.contourArea(self.contour)
-        self.hull = cv.convexHull(self.contour)
-        self.hull_perimeter = cv.arcLength(self.hull, True)
-        self.hull_area = cv.contourArea(self.hull)
+        self.height, self.width, self.channels = self.orig.shape
 
-        self.orig = orig
-        self.mask = np.zeros(self.orig.shape[:2], np.uint8)
+        cloud_filter = CloudFilter()
+        mask, _ = cloud_filter.evaluate_image(orig_path)
+        mask_re = cv.resize(mask, (self.width, self.height))
+        mask_re = cv.cvtColor(mask_re, cv.COLOR_BGR2GRAY)
 
-        cv.drawContours(self.mask, [self.contour], 0, (255, 255, 255), -1)
+        all_contours, _ = cv.findContours(cv.medianBlur(mask_re, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
+        areas = [cv.contourArea(cnt) for cnt in all_contours]
+        max_areas = np.sort(areas)[-num_clouds:]
+        self.contours = [all_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
 
-        self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
-        self.img_grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
+        self.clouds = [self.Cloud(self.orig, contour, distance, num_angles) for contour in self.contours]
 
-        # graylevel co-ocurrence matrix
-        ANGLES = np.arange(0, 2 * np.pi, np.pi / NUM_ANGLES * 2)
-        self.glcm = skimage.feature.graycomatrix(self.img_grey, [DISTANCE], ANGLES, normed=True)[:, :, 0, :]
-        self.glcm = np.mean(self.glcm, axis=2)
-        self.glcm = self.glcm[1:, 1:]
+    class Cloud:
+        def __init__(self, orig, contour, distance, num_angles):
+            self.orig = orig
+            self.contour = contour
+            self.mask = np.zeros(self.orig.shape[:2], np.uint8)
+            cv.drawContours(self.mask, [self.contour], 0, (255, 255, 255), -1)
 
-        # greylevel distance statistics
-        self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
-        self.glds = self.glds / np.sum(self.glds)
-        self.glds_diff = np.diff(self.glds)
+            self.img = cv.bitwise_and(self.orig, self.orig, mask=self.mask)
 
-    def get_circularity(self):
-        return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
+            self.form = self.Shape(self.contour)
+            self.texture = self.Texture(self.img, self.mask, distance, num_angles)
 
-    def get_rectangularity(self):
-        (x, y), (width, height), angle = cv.minAreaRect(self.contour)
-        return self.contour_area / (width * height)
+        class Shape:
 
-    def get_convexity(self):
-        return self.hull_perimeter / self.contour_perimeter
+            def __init__(self, contour):
+                self.contour = contour
+                self.contour_perimeter = cv.arcLength(self.contour, True)
+                self.contour_area = cv.contourArea(self.contour)
+                self.hull = cv.convexHull(self.contour)
+                self.hull_perimeter = cv.arcLength(self.hull, True)
+                self.hull_area = cv.contourArea(self.hull)
 
-    def get_compactness(self):
-        return (4 * np.pi * self.contour_area) / (self.contour_perimeter ** 2)
+            def __str__(self):
+                print(f'Shape Analysis:')
+                print(f'    contour perimeter: {self.contour_perimeter}')
+                print(f'    hull perimeter: {self.hull_perimeter}')
+                print(f'    contour area: {self.contour_area}')
+                print(f'    hull area: {self.hull_area}')
+                print(f'    circularity: {self.get_circularity()}')
+                print(f'    rectangularity: {self.get_rectangularity()}')
+                print(f'    convexity: {self.get_convexity()}')
+                print(f'    compactness: {self.get_compactness()}')
+                print(f'    solidity: {self.get_solidity()}')
+                print(f'    elongation: {self.get_elongation()}')
 
-    def get_solidity(self):
-        return self.contour_area / self.hull_area
+            def get_circularity(self):
+                return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
 
-    def get_elongation(self):
-        (x, y), (width, height), angle = cv.minAreaRect(self.contour)
-        return min(width, height) / max(width, height)
+            def get_rectangularity(self):
+                _, (width, height), angle = cv.minAreaRect(self.contour)
+                return self.contour_area / (width * height)
 
-    def get_mean(self):
-        return cv.mean(self.img, mask=self.mask)
+            def get_convexity(self):
+                return self.hull_perimeter / self.contour_perimeter
 
-    def get_standard_deviation(self):
-        _, stddev = cv.meanStdDev(self.img, mask=self.mask)
-        return stddev
+            def get_compactness(self):
+                return (4 * np.pi * self.contour_area) / (self.contour_perimeter ** 2)
 
-    def get_glcm_contrast(self):
-        i, j = np.indices(self.glcm.shape)
-        coefficients = ((i - j) ** 2).astype(int)
-        return np.sum(coefficients * self.glcm)
+            def get_solidity(self):
+                return self.contour_area / self.hull_area
 
-    def get_glds_skewness(self):
-        level = 0
-        for i, val in enumerate(self.glds):
-            level += val
-            if level >= 0.5:
-                return i
+            def get_elongation(self):
+                _, (width, height), angle = cv.minAreaRect(self.contour)
+                return min(width, height) / max(width, height)
+
+        class Texture:
+            def __init__(self, img, mask, distance, num_angles):
+                self.img = img
+                self.mask = mask
+                self.img_grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
+
+                # graylevel co-ocurrence matrix
+                angles = np.arange(0, 2 * np.pi, np.pi / num_angles * 2)
+                self.glcm = skimage.feature.graycomatrix(self.img_grey, [distance], angles, normed=True)[:, :, 0, :]
+                self.glcm = np.mean(self.glcm, axis=2)
+                self.glcm = self.glcm[1:, 1:]
+
+                # greylevel distance statistics
+                self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
+                self.glds = self.glds / np.sum(self.glds)
+                self.glds_diff = np.diff(self.glds)
+
+            def __str__(self):
+                print('Texture Analysis:\n')
+                print(f'    mean: {self.get_mean()}')
+                print(f'    standard deviation: {self.get_standard_deviation()}')
+                print(f'    glcm contrast:{self.get_glcm_contrast()}')
+                print(f'    glds skewness 0.25:{self.get_glds_skewness(0.25)}')
+                print(f'    glds skewness 0.5:{self.get_glds_skewness(0.5)}')
+                print(f'    glds skewness 0.75:{self.get_glds_skewness(0.75)}')
+
+            def get_mean(self):
+                return cv.mean(self.img, mask=self.mask)
+
+            def get_standard_deviation(self):
+                _, stddev = cv.meanStdDev(self.img, mask=self.mask)
+                return stddev
+
+            def get_glcm_contrast(self):
+                i, j = np.indices(self.glcm.shape)
+                coefficients = ((i - j) ** 2).astype(int)
+                return np.sum(coefficients * self.glcm)
+
+            def get_glds_skewness(self, proportion):
+                level = 0
+                for i, val in enumerate(self.glds):
+                    level += val
+                    if level >= proportion:
+                        return i
 
     # TODO transparency
     # TODO edges
     # TODO interpretation
-
-
-def rescale_image(mask, orig):
-    height, width, channels = orig.shape
-    mask_re = cv.resize(mask, (width, height))
-    mask_re = cv.cvtColor(mask_re, cv.COLOR_BGR2GRAY)
-    return mask_re
-
-
-def get_contours(img):
-    img = cv.medianBlur(img, 3)
-    contours, _ = cv.findContours(img, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
-    areas = [cv.contourArea(cnt) for cnt in contours]
-    max_areas = np.sort(areas)[-NUM_CLOUDS:]
-    new_contours = [contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
-    return new_contours
-
-
-if __name__ == '__main__':
-    # cv.namedWindow("output", cv.WINDOW_NORMAL)
-    dtime = time.time()
-    orig = cv.imread(path + '/sample_data/Data/zz_astropi_1_photo_364.jpg')
-    # cf = CloudFilter()
-    # mask, color_image = cf.evaluate_image(path + '/sample_data/Data/zz_astropi_1_photo_364.jpg')
-    mask = cv.imread('mask_re_364.jpg')
-    mask_re = rescale_image(mask, orig)
-    contours = get_contours(mask_re)
-    clouds = [Cloud(orig, contour) for contour in contours]
-
-    print('\n#######################################\n')
-    for cloud in clouds:
-        print('Shape Analysis:\n')
-        print(f'contour area: {cloud.contour_area}')
-        print(f'hull area: {cloud.hull_area}')
-        print(f'circularity: {cloud.get_circularity()}')
-        print(f'rectangularity: {cloud.get_rectangularity()}')
-        print(f'convexity: {cloud.get_convexity()}')
-        print(f'compactness: {cloud.get_compactness()}')
-        print(f'solidity: {cloud.get_solidity()}')
-        print(f'elongation: {cloud.get_elongation()}')
-        print('\n---------------------------------------\n')
-        print('Texture Analysis:\n')
-        print(f'mean: {cloud.get_mean()}')
-        print(f'standard deviation: {cloud.get_standard_deviation()}')
-        print(f'glcm contrast:\n{cloud.get_glcm_contrast()}')
-        print(f'glds skewness:\n{cloud.get_glds_skewness()}')
-        print('\n#######################################\n')
-        plt.plot(range(len(cloud.glds)), cloud.glds,
-                 label='relative occurrence within cloud')
-        plt.plot(range(len(cloud.glds_diff)), cloud.glds_diff,
-                 label='difference of relative occurrences within cloud')
-        plt.title('Greylevel Distance Statistics')
-        plt.xlabel('greyscale distance')
-        plt.legend()
-        plt.show()
-        plot(cloud.img)
-
-print(f'computation time:  {time.time() - dtime}')
