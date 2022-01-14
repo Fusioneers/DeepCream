@@ -41,9 +41,9 @@ class CloudFilter:
         self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
         self.model.load_weights(path + 'clouds_test.hdf5')
 
-    def load_image(self, image_path):
-        normal = cv2.resize(cv2.imread(image_path), (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
-        scaled = Image.open(image_path)
+    def load_image(self, img):
+        normal = cv2.resize(img, (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
+        scaled = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
         if normal is None or scaled is None:
             return None, None, None
@@ -102,8 +102,8 @@ class CloudFilter:
 
         return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
 
-    def evaluate_image(self, image_path, dark="Too dark"):
-        normal, scaled, gray = self.load_image(image_path)
+    def evaluate_image(self, img, dark="Too dark"):
+        normal, scaled, gray = self.load_image(img)
 
         if normal is None or scaled is None or gray is None:
             return None, None

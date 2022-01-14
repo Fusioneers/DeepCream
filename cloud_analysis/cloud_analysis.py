@@ -26,7 +26,7 @@ class Analysis:
 
         # in this part the intelligent mask for the clouds is created and the clouds are separated
         cloud_filter = CloudFilter()
-        mask, _ = cloud_filter.evaluate_image(orig_path)
+        mask, _ = cloud_filter.evaluate_image(cv.imread(orig_path))
         mask_re = cv.resize(mask, (self.width, self.height))
 
         all_contours, _ = cv.findContours(cv.medianBlur(mask_re, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
@@ -49,7 +49,7 @@ class Analysis:
         def __init__(self, img, mask, contour, distance, num_glcm):
             """
 
-            :param img: The image of the cloud. Note that the background is black while only the cloud itself has color.
+            :param img: The image of the cloud. while the background is black only the cloud itself has color.
             :param contour: list of the points that describe the border of the cloud
             :param distance: the length of the offset vector for a GLCM
             :param num_glcm: number of GLCMs averaged with rotated offset vectors
@@ -129,7 +129,7 @@ class Analysis:
                 out = ['Texture Analysis:\n',
                        f'    mean: {self.mean()}',
                        f'    standard deviation: {self.std()}',
-                       f'    glcm contrast: {self.contrast()}',
+                       f'    contrast: {self.contrast()}',
                        f'    glds skewness: 0.25: {self.glds_skewness(0.25)}',
                        f'    glds skewness: 0.5: {self.glds_skewness(0.5)}',
                        f'    glds skewness: 0.75: {self.glds_skewness(0.75)}', ]

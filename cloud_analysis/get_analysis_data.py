@@ -1,5 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 import time
 import cv2 as cv
@@ -10,7 +8,7 @@ path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\get_analysis_dat
 # TODO get data for a lot of images and compare features for hopefully meaningful results
 
 
-img_path = path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'
+img_path = path + r'sample_data\Data\zz_astropi_1_photo_252.jpg'
 num_clouds = 5
 distance = 20
 num_angles = 16
@@ -25,13 +23,14 @@ def plot(img):
 dtime = time.time()
 
 analysis = Analysis(img_path, num_clouds, distance, num_angles)
-print('finished constructing analysis')
+print('finished constructing')
 
 print('\n################################\n')
 for cloud in analysis.clouds:
-    print(analysis.clouds[0].shape)
+    print(cloud.shape)
     print('\n--------------------------------\n')
-    print(analysis.clouds[0].texture)
+    print(cloud.texture)
     print('\n################################\n')
+    plot(cloud.img)
 
 print(f'computation time:  {time.time() - dtime}')
