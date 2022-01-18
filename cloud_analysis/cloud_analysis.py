@@ -164,6 +164,14 @@ class Analysis:
                     if level >= proportion:
                         return i
 
+            def contrast_img(self, n=5):
+                out = np.zeros(self.grey.shape)
+
+                for offset_x in range(-n, n + 1):
+                    for offset_y in range(-n, n + 1):
+                        out += np.abs(self.grey - np.roll(self.grey, (offset_x, offset_y), axis=(1, 0)))
+
+                return np.floor(np.divide(out, (2 * n + 1) ** 2))
 
             def transparency(self):
                 # TODO transparency
