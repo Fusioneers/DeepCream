@@ -4,8 +4,6 @@ import skimage
 from cloud_detection.cloud_filter import CloudFilter
 
 
-# TODO more comments
-
 # for more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and h<ttp://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
@@ -13,7 +11,7 @@ from cloud_detection.cloud_filter import CloudFilter
 
 class Analysis:
 
-    def __init__(self, orig, num_clouds=5, distance=20, num_glcm=16, c_dist=5):
+    def __init__(self, orig, num_clouds, distance, num_glcm, c_dist):
         """
 
         :param orig: the image you want to analyse
@@ -121,7 +119,7 @@ class Analysis:
                 angles = np.arange(0, 2 * np.pi, np.pi / num_glcm * 2)
                 self.glcm = skimage.feature.graycomatrix(self.grey, [distance], angles, normed=True)[:, :, 0, :]
                 self.glcm = np.mean(self.glcm, axis=2)
-                # self.glcm = self.glcm[1:, 1:]
+                self.glcm = self.glcm[1:, 1:]
 
                 # gray-level distance statistics
                 self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
@@ -186,6 +184,16 @@ class Analysis:
             pass
 
         def edge_width(self):
-            return self.texture.contrast()/self.shape.convexity()
+            return self.texture.contrast() / self.shape.convexity()
 
     # TODO interpretation
+
+    # TODO contrast based on contour
+
+    # TODO circle too smooth border
+
+    # TODO small clouds (stratus) aren't recognised
+
+    # TODO more comments
+
+    # TODO make code more stable
