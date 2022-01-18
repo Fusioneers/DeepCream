@@ -1,12 +1,14 @@
-import numpy as np
 import cv2 as cv
+import numpy as np
 import skimage
 from cloud_detection.cloud_filter import CloudFilter
 
 
+# TODO more comments
+
 # for more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
-# and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
+# and h<ttp://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
 
 class Analysis:
@@ -60,7 +62,7 @@ class Analysis:
             self.contour = contour
 
             self.shape = self.Shape(self.contour)
-            self.texture = self.Color(self.img, self.mask, distance, num_glcm)
+            self.texture = self.Texture(self.img, self.mask, distance, num_glcm)
 
         def __str__(self):
             return f'dimensions: {self.img.shape}'
@@ -109,7 +111,7 @@ class Analysis:
                 _, (width, height), angle = cv.minAreaRect(self.contour)
                 return min(width, height) / max(width, height)
 
-        class Color:
+        class Texture:
             def __init__(self, img, mask, distance, num_glcm):
                 self.img = img
                 self.mask = mask
@@ -119,14 +121,14 @@ class Analysis:
                 angles = np.arange(0, 2 * np.pi, np.pi / num_glcm * 2)
                 self.glcm = skimage.feature.graycomatrix(self.grey, [distance], angles, normed=True)[:, :, 0, :]
                 self.glcm = np.mean(self.glcm, axis=2)
-                self.glcm = self.glcm[1:, 1:]
+                # self.glcm = self.glcm[1:, 1:]
 
-                # grey-level distance statistics
+                # gray-level distance statistics
                 self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
                 self.glds = self.glds / np.sum(self.glds)
 
             def __str__(self):
-                out = ['Color Analysis:\n',
+                out = ['Texture Analysis:\n',
                        f'    mean: {self.mean()}',
                        f'    standard deviation: {self.std()}',
                        f'    contrast: {self.contrast()}',
@@ -134,6 +136,13 @@ class Analysis:
                        f'    glds skewness: 0.5: {self.glds_skewness(0.5)}',
                        f'    glds skewness: 0.75: {self.glds_skewness(0.75)}', ]
                 return '\n'.join(out)
+
+            def dis(self):
+                data = []
+                for n in range(3):
+                    channel = np.array(self.img[:, :, n].ravel())
+                    data.append(channel[channel.nonzero()])
+                return data
 
             def mean(self):
                 return cv.mean(self.img, mask=self.mask)[:-1]
@@ -155,8 +164,24 @@ class Analysis:
                     if level >= proportion:
                         return i
 
-    # TODO transparency
 
-    # TODO edges
+            def transparency(self):
+                # TODO transparency
+                pass
+
+            def edges(self):
+                # TODO edges
+
+                # contrast of contrast image - second derivative
+                pass
+
+        def altitude(self):
+
+            # https://en.wikipedia.org/wiki/Cloud_base#Measurement
+            # https://en.wikipedia.org/wiki/Dew_point#Simple_approximation
+            # altitude = surface temperature - dew point * 400 + surface level
+            # dew point = temperature - (100 - humidity)/5 above 50% relative humidity
+            # unknown: surface temperature and humidity - weather stations on earth?
+            pass
 
     # TODO interpretation
