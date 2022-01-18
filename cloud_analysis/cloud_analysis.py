@@ -13,7 +13,7 @@ from cloud_detection.cloud_filter import CloudFilter
 
 class Analysis:
 
-    def __init__(self, orig, num_clouds, distance, num_glcm):
+    def __init__(self, orig, num_clouds=5, distance=20, num_glcm=16, c_dist=5):
         """
 
         :param orig: the image you want to analyse
@@ -41,14 +41,14 @@ class Analysis:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            self.clouds.append(self.Cloud(img, mask, contour, distance, num_glcm))
+            self.clouds.append(self.Cloud(img, mask, contour, distance, num_glcm, c_dist))
 
     def __str__(self):
         # TODO more information?
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
-        def __init__(self, img, mask, contour, distance, num_glcm):
+        def __init__(self, img, mask, contour, distance, num_glcm, c_dist):
             """
 
             :param img: The image of the cloud. while the background is black only the cloud itself has color.
@@ -62,10 +62,10 @@ class Analysis:
             self.contour = contour
 
             self.shape = self.Shape(self.contour)
-            self.texture = self.Texture(self.img, self.mask, distance, num_glcm)
+            self.texture = self.Texture(self.img, self.mask, distance, num_glcm, c_dist)
 
         def __str__(self):
-            return f'dimensions: {self.img.shape}'
+            return f'dimensions: {self.img.shape}\nedge width: {self.edge_width()}'
 
         class Shape:
 
@@ -112,7 +112,7 @@ class Analysis:
                 return min(width, height) / max(width, height)
 
         class Texture:
-            def __init__(self, img, mask, distance, num_glcm):
+            def __init__(self, img, mask, distance, num_glcm, c_dist):
                 self.img = img
                 self.mask = mask
                 self.grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
@@ -127,17 +127,26 @@ class Analysis:
                 self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
                 self.glds = self.glds / np.sum(self.glds)
 
+                self.contrast_img = np.zeros(self.grey.shape)
+
+                for offset_x in range(-c_dist, c_dist + 1):
+                    for offset_y in range(-c_dist, c_dist + 1):
+                        self.contrast_img += np.abs(self.grey - np.roll(self.grey, (offset_x, offset_y), axis=(1, 0)))
+
+                self.contrast_img = np.floor(np.divide(self.contrast_img, (2 * c_dist + 1) ** 2))
+
             def __str__(self):
                 out = ['Texture Analysis:\n',
-                       f'    mean: {self.mean()}',
-                       f'    standard deviation: {self.std()}',
-                       f'    contrast: {self.contrast()}',
-                       f'    glds skewness: 0.25: {self.glds_skewness(0.25)}',
-                       f'    glds skewness: 0.5: {self.glds_skewness(0.5)}',
-                       f'    glds skewness: 0.75: {self.glds_skewness(0.75)}', ]
+                       f'   mean: {self.mean()}',
+                       f'   standard deviation: {self.std()}',
+                       f'   contrast: {self.contrast()}',
+                       f'   glds skewness: 0.25: {self.glds_skewness(0.25)}',
+                       f'   glds skewness: 0.5: {self.glds_skewness(0.5)}',
+                       f'   glds skewness: 0.75: {self.glds_skewness(0.75)}',
+                       f'   transparency: {self.transparency()}', ]
                 return '\n'.join(out)
 
-            def dis(self):
+            def dist(self):
                 data = []
                 for n in range(3):
                     channel = np.array(self.img[:, :, n].ravel())
@@ -153,9 +162,7 @@ class Analysis:
                 return std
 
             def contrast(self):
-                i, j = np.indices(self.glcm.shape)
-                coefficients = ((i - j) ** 2).astype(int)
-                return np.sum(coefficients * self.glcm)
+                return np.sum(self.contrast_img) / np.count_nonzero(self.contrast_img)
 
             def glds_skewness(self, proportion):
                 level = 0
@@ -164,24 +171,10 @@ class Analysis:
                     if level >= proportion:
                         return i
 
-            def contrast_img(self, n=5):
-                out = np.zeros(self.grey.shape)
-
-                for offset_x in range(-n, n + 1):
-                    for offset_y in range(-n, n + 1):
-                        out += np.abs(self.grey - np.roll(self.grey, (offset_x, offset_y), axis=(1, 0)))
-
-                return np.floor(np.divide(out, (2 * n + 1) ** 2))
-
             def transparency(self):
-                # TODO transparency
-                pass
-
-            def edges(self):
-                # TODO edges
-
-                # contrast of contrast image - second derivative
-                pass
+                sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
+                inverse = np.where(sat == 0, sat, 255 - sat)
+                return np.sum(inverse) / np.count_nonzero(inverse)
 
         def altitude(self):
 
@@ -191,5 +184,8 @@ class Analysis:
             # dew point = temperature - (100 - humidity)/5 above 50% relative humidity
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
+
+        def edge_width(self):
+            return self.texture.contrast()/self.shape.convexity()
 
     # TODO interpretation
