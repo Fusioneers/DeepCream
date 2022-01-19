@@ -137,6 +137,7 @@ class Analysis:
                 inverse = np.where(sat == 0, sat, 255 - sat)
                 return np.sum(inverse) / np.count_nonzero(inverse)
 
+
         def altitude(self):
 
             # https://en.wikipedia.org/wiki/Cloud_base#Measurement
@@ -146,8 +147,13 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edge_width(self):
-            pass
+        def edges(self, num_sample_points):
+
+            # get sample points representative for the edge of the cloud
+            sample_points = self.contour[np.random.randint(low=0, high=len(self.contour), size=num_sample_points)]
+
+            # get perpendicular vectors
+
 
     # TODO contrast based on contour
 
