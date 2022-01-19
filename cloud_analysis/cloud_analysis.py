@@ -1,23 +1,20 @@
 import cv2 as cv
 import numpy as np
-import skimage
 from cloud_detection.cloud_filter import CloudFilter
 
 
 # for more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
-# and h<ttp://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
+# and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
 
 class Analysis:
 
-    def __init__(self, orig, num_clouds, distance, num_glcm, c_dist):
+    def __init__(self, orig, num_clouds):
         """
 
         :param orig: the image you want to analyse
         :param num_clouds: the number of largest clouds you want to analyse
-        :param distance: the length of the offset vector for the GLCMs
-        :param num_glcm: number of GLCM averaged with rotated offset vectors
         """
 
         self.orig = orig
@@ -39,20 +36,18 @@ class Analysis:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            self.clouds.append(self.Cloud(img, mask, contour, distance, num_glcm, c_dist))
+            self.clouds.append(self.Cloud(img, mask, contour))
 
     def __str__(self):
         # TODO more information?
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
-        def __init__(self, img, mask, contour, distance, num_glcm, c_dist):
+        def __init__(self, img, mask, contour):
             """
 
             :param img: The image of the cloud. while the background is black only the cloud itself has color.
             :param contour: list of the points that describe the border of the cloud
-            :param distance: the length of the offset vector for the GLCMs
-            :param num_glcm: number of GLCMs averaged with rotated offset vectors
             """
 
             self.img = img
@@ -60,7 +55,7 @@ class Analysis:
             self.contour = contour
 
             self.shape = self.Shape(self.contour)
-            self.texture = self.Texture(self.img, self.mask, distance, num_glcm, c_dist)
+            self.texture = self.Texture(self.img, self.mask)
 
         def __str__(self):
             return f'dimensions: {self.img.shape}\nedge width: {self.edge_width()}'
@@ -110,37 +105,15 @@ class Analysis:
                 return min(width, height) / max(width, height)
 
         class Texture:
-            def __init__(self, img, mask, distance, num_glcm, c_dist):
+            def __init__(self, img, mask):
                 self.img = img
                 self.mask = mask
                 self.grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
-
-                # gray-level co-occurrence matrix
-                angles = np.arange(0, 2 * np.pi, np.pi / num_glcm * 2)
-                self.glcm = skimage.feature.graycomatrix(self.grey, [distance], angles, normed=True)[:, :, 0, :]
-                self.glcm = np.mean(self.glcm, axis=2)
-                self.glcm = self.glcm[1:, 1:]
-
-                # gray-level distance statistics
-                self.glds = [np.sum(self.glcm.diagonal(n) + np.sum(self.glcm.diagonal(-n))) for n in range(256)]
-                self.glds = self.glds / np.sum(self.glds)
-
-                self.contrast_img = np.zeros(self.grey.shape)
-
-                for offset_x in range(-c_dist, c_dist + 1):
-                    for offset_y in range(-c_dist, c_dist + 1):
-                        self.contrast_img += np.abs(self.grey - np.roll(self.grey, (offset_x, offset_y), axis=(1, 0)))
-
-                self.contrast_img = np.floor(np.divide(self.contrast_img, (2 * c_dist + 1) ** 2))
 
             def __str__(self):
                 out = ['Texture Analysis:\n',
                        f'   mean: {self.mean()}',
                        f'   standard deviation: {self.std()}',
-                       f'   contrast: {self.contrast()}',
-                       f'   glds skewness: 0.25: {self.glds_skewness(0.25)}',
-                       f'   glds skewness: 0.5: {self.glds_skewness(0.5)}',
-                       f'   glds skewness: 0.75: {self.glds_skewness(0.75)}',
                        f'   transparency: {self.transparency()}', ]
                 return '\n'.join(out)
 
@@ -159,16 +132,6 @@ class Analysis:
                 std = (std[0][0], std[1][0], std[2][0])
                 return std
 
-            def contrast(self):
-                return np.sum(self.contrast_img) / np.count_nonzero(self.contrast_img)
-
-            def glds_skewness(self, proportion):
-                level = 0
-                for i, val in enumerate(self.glds):
-                    level += val
-                    if level >= proportion:
-                        return i
-
             def transparency(self):
                 sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
                 inverse = np.where(sat == 0, sat, 255 - sat)
@@ -184,9 +147,7 @@ class Analysis:
             pass
 
         def edge_width(self):
-            return self.texture.contrast() / self.shape.convexity()
-
-    # TODO interpretation
+            pass
 
     # TODO contrast based on contour
 
@@ -194,6 +155,8 @@ class Analysis:
 
     # TODO small clouds (stratus) aren't recognised
 
-    # TODO more comments
+    # TODO interpretation
 
     # TODO make code more stable
+
+    # TODO more comments
