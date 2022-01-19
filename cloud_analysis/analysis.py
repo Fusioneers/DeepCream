@@ -36,20 +36,21 @@ class Analysis:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            self.clouds.append(self.Cloud(img, mask, contour))
+            self.clouds.append(self.Cloud(self.orig, img, mask, np.squeeze(contour)))
 
     def __str__(self):
         # TODO more information?
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
-        def __init__(self, img, mask, contour):
+        def __init__(self, orig, img, mask, contour):
             """
 
             :param img: The image of the cloud. while the background is black only the cloud itself has color.
             :param contour: list of the points that describe the border of the cloud
             """
 
+            self.orig = orig
             self.img = img
             self.mask = mask
             self.contour = contour
@@ -58,7 +59,7 @@ class Analysis:
             self.texture = self.Texture(self.img, self.mask)
 
         def __str__(self):
-            return f'dimensions: {self.img.shape}\nedge width: {self.edge_width()}'
+            return f'dimensions: {self.img.shape}\n'
 
         class Shape:
 
@@ -117,7 +118,7 @@ class Analysis:
                        f'   transparency: {self.transparency()}', ]
                 return '\n'.join(out)
 
-            def dist(self):
+            def distribution(self):
                 data = []
                 for n in range(3):
                     channel = np.array(self.img[:, :, n].ravel())
@@ -145,14 +146,34 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edges(self, num_sample_points, delta, length): # TODO better names
-            # get sample points representative for the edge of the cloud
-            sample_points = self.contour[np.random.randint(low=0, high=len(self.contour), size=num_sample_points)]
+        # TODO what to do at a border
+        # TODO span_steps to inwards and outwards
 
-            # get perpendicular vectors
-            rotated = sample_points
+        def edges(self, sample_proportion, regression_distance, span_steps):
+            print(f'contour shape: {self.contour.shape}')
+            num_sample_points = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
+            sample_points = self.contour[np.random.randint(0, high=self.contour.shape[0] - 1, size=num_sample_points)]
+            print(f'sample_points shape: {sample_points.shape}')
 
-    # TODO contrast based on contour
+            regression_vectors = np.roll(sample_points, regression_distance) - sample_points
+            print(f'regression vectors shape: {regression_vectors.shape}')
+
+            theta = np.pi / 2
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
+                                        [np.sin(theta), np.cos(theta)]])
+            # TODO validate this
+            perpendicular_vectors = np.matmul(regression_vectors, rotation_matrix)
+            print(f'perpendicular vectors shape: {perpendicular_vectors.shape}')
+
+            spans = [[(vector * t) + sample_points[n] for t in range(-span_steps, span_steps + 1)]
+                     for n, vector in enumerate(perpendicular_vectors)]
+            spans = np.array(spans).astype('int')
+            print(f'spans shape: {spans.shape}')
+
+            # TODO has a good shape, but makes no sense
+            edges = np.array([self.orig[span[0], span[1]] for span in spans])
+            print(edges.shape)
+            return edges
 
     # TODO circle too smooth border
 
