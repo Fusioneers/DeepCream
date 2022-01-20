@@ -39,7 +39,6 @@ class Analysis:
             self.clouds.append(self.Cloud(self.orig, img, mask, np.squeeze(contour)))
 
     def __str__(self):
-        # TODO more information?
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
@@ -146,41 +145,29 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        # TODO what to do at a border
-        # TODO span_steps to inwards and outwards
-
-        def edges(self, sample_proportion, regression_distance, span_steps):
+        def edges(self, sample_proportion, in_steps, out_steps, regression_distance=1, regression_length=1):
             print(f'contour shape: {self.contour.shape}')
+            print(self.contour)
             num_sample_points = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
-            sample_points = self.contour[np.random.randint(0, high=self.contour.shape[0] - 1, size=num_sample_points)]
+            indices = np.random.randint(0, high=self.contour.shape[0] - 1 - regression_distance, size=num_sample_points)
+            sample_points = self.contour[indices]
             print(f'sample_points shape: {sample_points.shape}')
 
-            regression_vectors = np.roll(sample_points, regression_distance) - sample_points
+            regression_vectors = self.contour[indices + regression_distance] - sample_points
+            regression_vectors = regression_vectors * regression_length / np.linalg.norm(regression_vectors, axis=1)
             print(f'regression vectors shape: {regression_vectors.shape}')
+            print(regression_vectors)
 
-            theta = np.pi / 2
-            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],
-                                        [np.sin(theta), np.cos(theta)]])
-            # TODO validate this
-            perpendicular_vectors = np.matmul(regression_vectors, rotation_matrix)
+            perpendicular_vectors = np.roll(regression_vectors, 1, axis=1)
+            perpendicular_vectors[:, 0] *= -1
             print(f'perpendicular vectors shape: {perpendicular_vectors.shape}')
+            print(perpendicular_vectors)
 
-            spans = [[(vector * t) + sample_points[n] for t in range(-span_steps, span_steps + 1)]
+            spans = [[np.floor((vector * t) + sample_points[n]).astype('int') for t in range(-in_steps, out_steps + 1)]
                      for n, vector in enumerate(perpendicular_vectors)]
             spans = np.array(spans).astype('int')
             print(f'spans shape: {spans.shape}')
 
-            # TODO has a good shape, but makes no sense
             edges = np.array([self.orig[span[0], span[1]] for span in spans])
             print(edges.shape)
             return edges
-
-    # TODO circle too smooth border
-
-    # TODO small clouds (stratus) aren't recognised
-
-    # TODO interpretation
-
-    # TODO make code more stable
-
-    # TODO more comments
