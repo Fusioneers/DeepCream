@@ -145,29 +145,21 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edges(self, sample_proportion, in_steps, out_steps, regression_distance=1, regression_length=1):
-            print(f'contour shape: {self.contour.shape}')
-            print(self.contour)
-            num_sample_points = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
-            indices = np.random.randint(0, high=self.contour.shape[0] - 1 - regression_distance, size=num_sample_points)
+        def edges(self, sample_proportion, in_steps, out_steps, regr_distance=1, regr_length=1):
+            num_pts = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
+            indices = np.sort(np.random.randint(0, high=self.contour.shape[0] - 1 - regr_distance, size=num_pts))
             sample_points = self.contour[indices]
-            print(f'sample_points shape: {sample_points.shape}')
 
-            regression_vectors = self.contour[indices + regression_distance] - sample_points
-            regression_vectors = regression_vectors * regression_length / np.linalg.norm(regression_vectors, axis=1)
-            print(f'regression vectors shape: {regression_vectors.shape}')
-            print(regression_vectors)
+            regr_vectors = self.contour[indices + regr_distance] - sample_points
+            regr_vectors = regr_vectors * regr_length / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
 
-            perpendicular_vectors = np.roll(regression_vectors, 1, axis=1)
+            perpendicular_vectors = np.roll(regr_vectors, 1, axis=1)
             perpendicular_vectors[:, 0] *= -1
-            print(f'perpendicular vectors shape: {perpendicular_vectors.shape}')
-            print(perpendicular_vectors)
 
-            spans = [[np.floor((vector * t) + sample_points[n]).astype('int') for t in range(-in_steps, out_steps + 1)]
+            spans = [[np.floor((vector * t) + sample_points[n]).astype('int')
+                      for t in range(-in_steps, out_steps + 1)]
                      for n, vector in enumerate(perpendicular_vectors)]
             spans = np.array(spans).astype('int')
-            print(f'spans shape: {spans.shape}')
 
-            edges = np.array([self.orig[span[0], span[1]] for span in spans])
-            print(edges.shape)
+            edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in spans])
             return edges
