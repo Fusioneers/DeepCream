@@ -22,6 +22,6 @@ def info(n):
     plot(cloud.img)
 
 
-info(0)
-info(1)
-info(-1)
+# info(0)
+# info(1)
+# info(-1)

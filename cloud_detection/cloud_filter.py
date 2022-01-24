@@ -31,7 +31,7 @@ class CloudFilter:
         self.vMin = v_min
         self.vMax = v_max
 
-        # The weight of the ai prediction
+        # The weight of the AI prediction
         self.weightAi = weight_ai
 
         # Load the machine learning model
@@ -58,7 +58,7 @@ class CloudFilter:
         return normal, scaled, gray
 
     def ai_generate_image_mask(self, original):
-        # Let the ai predict where the clouds are
+        # Let the AI predict where the clouds are
         pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT, self.WIDTH, 1))
 
         # Convert the prediction to a mask

@@ -1,46 +1,74 @@
+import os
+
 import cv2 as cv
 import numpy as np
+
 from cloud_detection.cloud_filter import CloudFilter
 
+path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\analysis.py')
 
 # for a more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
+
+camera_contour_path = path + r'cloud_analysis\camera_border.npy'
+camera_contour = np.load(camera_contour_path)
+
+
 class Analysis:
 
+    # TODO convert to multiple functions
     def __init__(self, orig, num_clouds, threshold):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
 
-        # in this part the intelligent mask for the clouds is created and the clouds are separated
+        self.mask = self._get_mask()
+
+        self.contours = self._get_contours(num_clouds, threshold)
+
+        self.clouds = self._get_clouds()
+
+    def __str__(self):
+        return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
+
+    def _get_mask(self):
         cloud_filter = CloudFilter()
-        mask, _ = cloud_filter.evaluate_image(orig)
-        mask_re = cv.resize(mask, (self.width, self.height))
+        mask, _ = cloud_filter.evaluate_image(self.orig)
+        return cv.resize(mask, (self.width, self.height))
 
+    def _get_contours(self, num_clouds, threshold):
         # get the contours of the clouds
-        all_contours, _ = cv.findContours(cv.medianBlur(mask_re, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
-
-        # remove clouds which share a too large part with the circle border
-
-        # TODO get border for the circle, get array of circle_border == contour, then get proportion for true values
-
+        all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
         all_contours = [np.squeeze(cnt) for cnt in all_contours]
+
+        # TODO maybe for every pixel on border get black values?
+        # TODO get border for the circle, get array of circle_border == contour, then get proportion for true values
+        pure_clouds = []
+        print(camera_contour.shape)
+        for contour in all_contours:
+            print(contour.shape)
+
+            on_border = np.array([point in camera_contour for point in contour])
+            print(on_border)
+            if np.count_nonzero(on_border) / contour.shape[0] < threshold:
+                pure_clouds.append(contour)
+        pure_clouds = np.array(pure_clouds)
+        print(pure_clouds)
 
         areas = [cv.contourArea(cnt) for cnt in all_contours]
         max_areas = np.sort(areas)[-num_clouds:]
-        self.contours = [all_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
+        return [all_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
 
-        # this is a list from the num_clouds largest clouds which are objects of the type Cloud
-        self.clouds = []
+    def _get_clouds(self):
+
+        clouds = []
         for contour in self.contours:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            self.clouds.append(self.Cloud(self.orig, img, mask, contour))
-
-    def __str__(self):
-        return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
+            clouds.append(self.Cloud(self.orig, img, mask, contour))
+        return clouds
 
     class Cloud:
         def __init__(self, orig, img, mask, contour):
