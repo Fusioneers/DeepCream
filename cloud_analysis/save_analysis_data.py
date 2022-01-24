@@ -6,8 +6,6 @@ from analysis import Analysis
 
 path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\save_analysis_data.py')
 
-# TODO get data for a lot of images and compare features for hopefully meaningful results
-
 
 directory = path + r'sample_data\set_1'
 num_clouds = 5

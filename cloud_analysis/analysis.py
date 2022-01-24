@@ -3,20 +3,13 @@ import numpy as np
 from cloud_detection.cloud_filter import CloudFilter
 
 
-# for more detailed explanation of the methods
+# for a more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
-
 class Analysis:
 
-    def __init__(self, orig, num_clouds):
-        """
-
-        :param orig: the image you want to analyse
-        :param num_clouds: the number of largest clouds you want to analyse
-        """
-
+    def __init__(self, orig, num_clouds, threshold):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
 
@@ -25,7 +18,15 @@ class Analysis:
         mask, _ = cloud_filter.evaluate_image(orig)
         mask_re = cv.resize(mask, (self.width, self.height))
 
+        # get the contours of the clouds
         all_contours, _ = cv.findContours(cv.medianBlur(mask_re, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
+
+        # remove clouds which share a too large part with the circle border
+
+        # TODO get border for the circle, get array of circle_border == contour, then get proportion for true values
+
+        all_contours = [np.squeeze(cnt) for cnt in all_contours]
+
         areas = [cv.contourArea(cnt) for cnt in all_contours]
         max_areas = np.sort(areas)[-num_clouds:]
         self.contours = [all_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
@@ -36,19 +37,13 @@ class Analysis:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            self.clouds.append(self.Cloud(self.orig, img, mask, np.squeeze(contour)))
+            self.clouds.append(self.Cloud(self.orig, img, mask, contour))
 
     def __str__(self):
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
     class Cloud:
         def __init__(self, orig, img, mask, contour):
-            """
-
-            :param img: The image of the cloud. while the background is black only the cloud itself has color.
-            :param contour: list of the points that describe the border of the cloud
-            """
-
             self.orig = orig
             self.img = img
             self.mask = mask
@@ -125,7 +120,7 @@ class Analysis:
                 return data
 
             def mean(self):
-                return cv.mean(self.img, mask=self.mask)[:-1]
+                return np.mean(self.img, axis=(0, 1), where=np.nonzero(self.mask))
 
             def std(self):
                 _, std = cv.meanStdDev(self.img, mask=self.mask)
@@ -145,9 +140,9 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edges(self, sample_proportion, in_steps, out_steps, regr_distance=1, regr_length=1):
-            num_pts = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
-            indices = np.sort(np.random.randint(0, high=self.contour.shape[0] - 1 - regr_distance, size=num_pts))
+        def edges(self, num_samples, in_steps, out_steps, regr_distance=1, regr_length=1):
+            # num_pts = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
+            indices = np.sort(np.linspace(0, self.contour.shape[0] - 1 - regr_distance, num=num_samples).astype('int'))
             sample_points = self.contour[indices]
 
             regr_vectors = self.contour[indices + regr_distance] - sample_points
@@ -162,4 +157,5 @@ class Analysis:
             spans = np.array(spans).astype('int')
 
             edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in spans])
-            return edges
+
+            return np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
