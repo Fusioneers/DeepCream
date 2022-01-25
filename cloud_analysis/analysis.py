@@ -1,31 +1,22 @@
-import os
-
 import cv2 as cv
 import numpy as np
-
 from cloud_detection.cloud_filter import CloudFilter
-
-path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\analysis.py')
 
 # for a more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
 
-camera_contour_path = path + r'cloud_analysis\camera_border.npy'
-camera_contour = np.load(camera_contour_path)
-
-
 class Analysis:
 
     # TODO convert to multiple functions
-    def __init__(self, orig, num_clouds, threshold):
+    def __init__(self, orig, num_clouds):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
 
         self.mask = self._get_mask()
 
-        self.contours = self._get_contours(num_clouds, threshold)
+        self.contours = self._get_contours(num_clouds)
 
         self.clouds = self._get_clouds()
 
@@ -37,24 +28,10 @@ class Analysis:
         mask, _ = cloud_filter.evaluate_image(self.orig)
         return cv.resize(mask, (self.width, self.height))
 
-    def _get_contours(self, num_clouds, threshold):
+    def _get_contours(self, num_clouds):
         # get the contours of the clouds
         all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
         all_contours = [np.squeeze(cnt) for cnt in all_contours]
-
-        # TODO maybe for every pixel on border get black values?
-        # TODO get border for the circle, get array of circle_border == contour, then get proportion for true values
-        pure_clouds = []
-        print(camera_contour.shape)
-        for contour in all_contours:
-            print(contour.shape)
-
-            on_border = np.array([point in camera_contour for point in contour])
-            print(on_border)
-            if np.count_nonzero(on_border) / contour.shape[0] < threshold:
-                pure_clouds.append(contour)
-        pure_clouds = np.array(pure_clouds)
-        print(pure_clouds)
 
         areas = [cv.contourArea(cnt) for cnt in all_contours]
         max_areas = np.sort(areas)[-num_clouds:]
