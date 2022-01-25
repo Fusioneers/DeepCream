@@ -1,7 +1,9 @@
-from analysis import Analysis
 import os
+
 import cv2 as cv
 import matplotlib.pyplot as plt
+
+from analysis import Analysis
 
 
 def plot(img):
@@ -11,17 +13,18 @@ def plot(img):
 
 path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\analysis_test.py')
 
-analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'), 5, 0.3)
+analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'), 5)
 
 
 def info(n):
     cloud = analysis.clouds[n]
-    edges = cloud.edges(200, 200, 200)
-    print(edges)
+    # edges = cloud.edges(200, 200, 200)
+    # print(edges)
     print(cloud.shape)
     plot(cloud.img)
 
 
-# info(0)
-# info(1)
-# info(-1)
+plot(analysis.mask)
+
+for n in range(5):
+    info(n)
