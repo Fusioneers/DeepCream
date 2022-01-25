@@ -1,7 +1,9 @@
-from analysis import Analysis
 import os
+
 import cv2 as cv
 import matplotlib.pyplot as plt
+
+from analysis import Analysis
 
 
 def plot(img):
@@ -24,3 +26,7 @@ def info(n):
 info(0)
 info(1)
 info(-1)
+plot(analysis.mask)
+
+for n in range(5):
+    info(n)

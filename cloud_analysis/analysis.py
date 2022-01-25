@@ -9,16 +9,20 @@ from cloud_detection.cloud_filter import CloudFilter
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
 
 
+BORDER_DISTANCE = 972
+
+
 class Analysis:
 
     # TODO convert to multiple functions
-    def __init__(self, orig, num_clouds):
+    def __init__(self, orig, num_clouds, border_threshold=0.1, border_width=25):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
+        self.center = np.array([self.height / 2, self.width / 2])
 
         self.mask = self._get_mask()
 
-        self.contours = self._get_contours(num_clouds)
+        self.contours = self._get_contours(num_clouds, border_threshold=border_threshold, border_width=border_width)
 
         self.clouds = self._get_clouds()
 
@@ -30,14 +34,30 @@ class Analysis:
         mask, _ = cloud_filter.evaluate_image(self.orig)
         return cv.resize(mask, (self.width, self.height))
 
-    def _get_contours(self, num_clouds):
-        # get the contours of the clouds
-        all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
-        all_contours = [np.squeeze(cnt) for cnt in all_contours]
+    def _get_contours(self, num_clouds, border_threshold, border_width):
+        all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+        all_contours = [np.squeeze(contour) for contour in all_contours]
 
-        areas = [cv.contourArea(cnt) for cnt in all_contours]
-        max_areas = np.sort(areas)[-num_clouds:]
-        return [all_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
+        norm_contours = [np.linalg.norm(contour - self.center, axis=1) for contour in all_contours]
+
+        border_ratios = []
+        for i, contour in enumerate(norm_contours):
+            num_border_pixels = np.count_nonzero([np.abs(distance - BORDER_DISTANCE) < border_width
+                                                  or all_contours[i][n][0] < border_width
+                                                  or all_contours[i][n][0] > self.height - border_width
+                                                  for n, distance in enumerate(contour)])
+            border_ratios.append(num_border_pixels / cv.arcLength(all_contours[i], True))
+        print(border_ratios)
+        non_border_contours = []
+        for i, contour in enumerate(all_contours):
+            if border_ratios[i] <= border_threshold:
+                non_border_contours.append(contour)
+        return non_border_contours
+        # areas = np.array([cv.contourArea(contour) for contour in non_border_contours])
+        # print(border_ratios)
+        # print(max(areas))
+        # max_areas = np.sort(areas)[-num_clouds:]
+        # return [non_border_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
 
     def _get_clouds(self):
 
@@ -74,7 +94,7 @@ class Analysis:
                 self.hull_area = cv.contourArea(self.hull)
 
             def __str__(self):
-                out = [f'Shape Analysis:\n',
+                out = [f'Shape Analysis:',
                        f'   contour perimeter: {self.contour_perimeter}',
                        f'   hull perimeter: {self.hull_perimeter}',
                        f'   contour area: {self.contour_area}',
@@ -114,7 +134,7 @@ class Analysis:
                 self.grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
 
             def __str__(self):
-                out = ['Texture Analysis:\n',
+                out = ['Texture Analysis:',
                        f'   mean: {self.mean()}',
                        f'   standard deviation: {self.std()}',
                        f'   transparency: {self.transparency()}', ]
