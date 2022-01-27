@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
+
 from cloud_detection.cloud_filter import CloudFilter
+
 
 # for a more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
@@ -50,6 +52,7 @@ class Analysis:
     class Cloud:
         def __init__(self, orig, img, mask, contour):
             self.orig = orig
+            self.height, self.width, self.channels = self.orig.shape
             self.img = img
             self.mask = mask
             self.contour = contour
@@ -145,22 +148,46 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edges(self, num_samples, in_steps, out_steps, regr_distance=1, regr_length=1):
-            # num_pts = np.floor(self.contour.shape[0] * sample_proportion).astype('int')
-            indices = np.sort(np.linspace(0, self.contour.shape[0] - 1 - regr_distance, num=num_samples).astype('int'))
-            sample_points = self.contour[indices]
+        def edges(self, num_samples, in_steps, out_steps, regr_distance=3, regr_length=1):
+            # dtime = time()
+            # assert len(self.orig.shape) == 3
 
-            regr_vectors = self.contour[indices + regr_distance] - sample_points
+            regr_vectors = np.roll(self.contour, regr_distance, axis=0) - self.contour
             regr_vectors = regr_vectors * regr_length / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
+            # assert len(regr_vectors.shape) == 2
+            # assert regr_vectors.shape[1] == 2
 
-            perpendicular_vectors = np.roll(regr_vectors, 1, axis=1)
-            perpendicular_vectors[:, 0] *= -1
+            perp_vectors = np.roll(regr_vectors, 1, axis=1)
+            perp_vectors[:, 0] *= -1
+            # assert len(perp_vectors.shape) == 2
+            # assert perp_vectors.shape[1] == 2
 
-            spans = [[np.floor((vector * t) + sample_points[n]).astype('int')
+            spans = [[np.floor((vector * t) + self.contour[n]).astype('int')
                       for t in range(-in_steps, out_steps + 1)]
-                     for n, vector in enumerate(perpendicular_vectors)]
-            spans = np.array(spans).astype('int')
+                     for n, vector in enumerate(perp_vectors)]
+            spans = np.array(spans)
+            # assert len(spans.shape) == 3
+            # assert spans.shape[1] == in_steps + out_steps + 1
+            # assert spans.shape[2] == 2
 
-            edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in spans])
+            valid_spans = [span for span in spans if
+                           np.all(np.logical_and(np.logical_and(self.height > span[:, 0], span[:, 0] >= 0),
+                                                 np.logical_and(self.width > span[:, 1], span[:, 1] >= 0)))]
 
-            return np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
+            valid_spans = np.array(list(valid_spans))
+            indices = np.sort(np.floor(np.linspace(0, valid_spans.shape[0] - 1, num=num_samples)).astype('int'))
+            # assert len(indices.shape) == 1
+            # assert indices.shape[0] == num_samples
+
+            sample_spans = valid_spans[indices]
+            # assert len(sample_spans.shape) == 3
+            # assert sample_spans.shape[0] == num_samples
+            # assert sample_spans.shape[1] == in_steps + out_steps + 1
+            # assert sample_spans.shape[2] == 2
+
+            edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in sample_spans])
+
+            out = np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
+            # assert out.dtype == float
+            # print(time() - dtime)
+            return out

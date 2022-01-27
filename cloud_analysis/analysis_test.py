@@ -17,6 +17,7 @@ analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.j
 def info(n):
     cloud = analysis.clouds[n]
     print(cloud.shape)
+    print(cloud.edges(50, 100, 500))
     plot(cloud.img)
 
 
