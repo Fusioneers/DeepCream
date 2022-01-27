@@ -3,7 +3,6 @@ import numpy as np
 
 from cloud_detection.cloud_filter import CloudFilter
 
-
 # for a more detailed explanation of the methods
 # see http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth06.pdf
 # and http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf
@@ -22,7 +21,7 @@ class Analysis:
 
         self.mask = self._get_mask()
 
-        self.contours = self._get_contours(num_clouds, border_threshold=border_threshold, border_width=border_width)
+        self.contours = self._get_contours(num_clouds, border_threshold, border_width)
 
         self.clouds = self._get_clouds()
 
@@ -35,29 +34,58 @@ class Analysis:
         return cv.resize(mask, (self.width, self.height))
 
     def _get_contours(self, num_clouds, border_threshold, border_width):
+
+        # TODO remove functions later?
+
+        def pick_by_area(contours, num_clouds):
+            assert len(contours[0].shape) == 2
+            assert num_clouds > 0
+            areas = np.array([cv.contourArea(contour) for contour in contours])
+            max_areas = np.sort(areas)[-num_clouds:]
+            return [contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
+
+        def get_border_ratios(all_contours, norms, border_width, img_height):
+            assert len(all_contours[0].shape) == 2
+            border_ratios = []
+            for i, contour in enumerate(norms):
+                num_border_pixels = np.count_nonzero([np.abs(distance - BORDER_DISTANCE) < border_width
+                                                      or all_contours[i][n][0] < border_width
+                                                      or all_contours[i][n][0] > img_height - border_width
+                                                      for n, distance in enumerate(contour)])
+                assert num_border_pixels <= contour.shape[0]
+                border_ratio = num_border_pixels / cv.arcLength(cv.convexHull(all_contours[i]), True)
+                border_ratios.append(border_ratio)
+
+            return border_ratios
+
+        def get_non_border_contours(all_contours, border_threshold, border_ratios):
+            non_border_contours = [contour for i, contour in enumerate(all_contours)
+                                   if border_ratios[i] <= border_threshold]
+            return non_border_contours
+
+        # get a tuple of arrays of all contours in the image
         all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
         all_contours = [np.squeeze(contour) for contour in all_contours]
+        assert len(all_contours[0].shape) == 2
 
+        # get the distance from the center for each point of the contours
         norm_contours = [np.linalg.norm(contour - self.center, axis=1) for contour in all_contours]
+        assert len(norm_contours[0].shape) == 1
 
-        border_ratios = []
-        for i, contour in enumerate(norm_contours):
-            num_border_pixels = np.count_nonzero([np.abs(distance - BORDER_DISTANCE) < border_width
-                                                  or all_contours[i][n][0] < border_width
-                                                  or all_contours[i][n][0] > self.height - border_width
-                                                  for n, distance in enumerate(contour)])
-            border_ratios.append(num_border_pixels / cv.arcLength(all_contours[i], True))
-        print(border_ratios)
-        non_border_contours = []
-        for i, contour in enumerate(all_contours):
-            if border_ratios[i] <= border_threshold:
-                non_border_contours.append(contour)
-        return non_border_contours
-        # areas = np.array([cv.contourArea(contour) for contour in non_border_contours])
-        # print(border_ratios)
-        # print(max(areas))
-        # max_areas = np.sort(areas)[-num_clouds:]
-        # return [non_border_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
+        # get the ratio of pixels on the contours which lie on the edge of the visible area to the respective contours
+        border_ratios = get_border_ratios(all_contours, norm_contours, border_width, self.height)
+        # TODO print average of nonzero ratios
+        assert len(border_ratios) == len(norm_contours)
+
+        # get all contours whose border ratio does not exceed a specific threshold
+        non_border_contours = get_non_border_contours(all_contours, border_threshold, border_ratios)
+        assert len(non_border_contours[0].shape) == 2
+        print(len(non_border_contours))
+
+        # take the largest contours
+        largest_contours = pick_by_area(non_border_contours, num_clouds)
+        print(len(largest_contours))
+        return largest_contours
 
     def _get_clouds(self):
 
@@ -169,45 +197,22 @@ class Analysis:
             pass
 
         def edges(self, num_samples, in_steps, out_steps, regr_distance=3, regr_length=1):
-            # dtime = time()
-            # assert len(self.orig.shape) == 3
-
             regr_vectors = np.roll(self.contour, regr_distance, axis=0) - self.contour
             regr_vectors = regr_vectors * regr_length / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
-            # assert len(regr_vectors.shape) == 2
-            # assert regr_vectors.shape[1] == 2
 
             perp_vectors = np.roll(regr_vectors, 1, axis=1)
             perp_vectors[:, 0] *= -1
-            # assert len(perp_vectors.shape) == 2
-            # assert perp_vectors.shape[1] == 2
 
-            spans = [[np.floor((vector * t) + self.contour[n]).astype('int')
-                      for t in range(-in_steps, out_steps + 1)]
-                     for n, vector in enumerate(perp_vectors)]
-            spans = np.array(spans)
-            # assert len(spans.shape) == 3
-            # assert spans.shape[1] == in_steps + out_steps + 1
-            # assert spans.shape[2] == 2
+            spans = np.array([[np.floor((vector * t) + self.contour[n]).astype('int')
+                               for t in range(-in_steps, out_steps + 1)]
+                              for n, vector in enumerate(perp_vectors)])
 
-            valid_spans = [span for span in spans if
-                           np.all(np.logical_and(np.logical_and(self.height > span[:, 0], span[:, 0] >= 0),
-                                                 np.logical_and(self.width > span[:, 1], span[:, 1] >= 0)))]
+            valid_spans = np.array([span for span in spans if
+                                    np.all(np.logical_and(np.logical_and(self.height > span[:, 0], span[:, 0] >= 0),
+                                                          np.logical_and(self.width > span[:, 1], span[:, 1] >= 0)))])
 
-            valid_spans = np.array(list(valid_spans))
-            indices = np.sort(np.floor(np.linspace(0, valid_spans.shape[0] - 1, num=num_samples)).astype('int'))
-            # assert len(indices.shape) == 1
-            # assert indices.shape[0] == num_samples
-
-            sample_spans = valid_spans[indices]
-            # assert len(sample_spans.shape) == 3
-            # assert sample_spans.shape[0] == num_samples
-            # assert sample_spans.shape[1] == in_steps + out_steps + 1
-            # assert sample_spans.shape[2] == 2
+            sample_spans = valid_spans[np.linspace(0, valid_spans.shape[0] - 1, num=num_samples).astype('int')]
 
             edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in sample_spans])
 
-            out = np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
-            # assert out.dtype == float
-            # print(time() - dtime)
-            return out
+            return np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)

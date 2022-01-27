@@ -13,20 +13,16 @@ def plot(img):
 
 path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\analysis_test.py')
 
-analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'), 5)
+analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'), 5, 0.1)
 
 
 def info(n):
     cloud = analysis.clouds[n]
-    print(cloud.shape)
-    print(cloud.edges(50, 100, 500))
+    # print(cloud.shape)
+    # print(cloud.edges(50, 100, 500))
     plot(cloud.img)
 
 
-info(0)
-info(1)
-info(-1)
-plot(analysis.mask)
-
 for n in range(5):
     info(n)
+plot(analysis.mask)
