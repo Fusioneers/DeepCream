@@ -13,16 +13,13 @@ BORDER_DISTANCE = 972
 
 class Analysis:
 
-    # TODO convert to multiple functions
-    def __init__(self, orig, num_clouds, border_threshold=0.1, border_width=25):
+    def __init__(self, orig, num_clouds, border_threshold=0.1, border_width=5):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
         self.center = np.array([self.height / 2, self.width / 2])
 
         self.mask = self._get_mask()
-
         self.contours = self._get_contours(num_clouds, border_threshold, border_width)
-
         self.clouds = self._get_clouds()
 
     def __str__(self):
@@ -35,60 +32,35 @@ class Analysis:
 
     def _get_contours(self, num_clouds, border_threshold, border_width):
 
-        # TODO remove functions later?
-
-        def pick_by_area(contours, num_clouds):
-            assert len(contours[0].shape) == 2
-            assert num_clouds > 0
-            areas = np.array([cv.contourArea(contour) for contour in contours])
-            max_areas = np.sort(areas)[-num_clouds:]
-            return [contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
-
-        def get_border_ratios(all_contours, norms, border_width, img_height):
-            assert len(all_contours[0].shape) == 2
-            border_ratios = []
-            for i, contour in enumerate(norms):
-                num_border_pixels = np.count_nonzero([np.abs(distance - BORDER_DISTANCE) < border_width
-                                                      or all_contours[i][n][0] < border_width
-                                                      or all_contours[i][n][0] > img_height - border_width
-                                                      for n, distance in enumerate(contour)])
-                assert num_border_pixels <= contour.shape[0]
-                border_ratio = num_border_pixels / cv.arcLength(cv.convexHull(all_contours[i]), True)
-                border_ratios.append(border_ratio)
-
-            return border_ratios
-
-        def get_non_border_contours(all_contours, border_threshold, border_ratios):
-            non_border_contours = [contour for i, contour in enumerate(all_contours)
-                                   if border_ratios[i] <= border_threshold]
-            return non_border_contours
-
         # get a tuple of arrays of all contours in the image
         all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
         all_contours = [np.squeeze(contour) for contour in all_contours]
-        assert len(all_contours[0].shape) == 2
 
         # get the distance from the center for each point of the contours
         norm_contours = [np.linalg.norm(contour - self.center, axis=1) for contour in all_contours]
-        assert len(norm_contours[0].shape) == 1
 
         # get the ratio of pixels on the contours which lie on the edge of the visible area to the respective contours
-        border_ratios = get_border_ratios(all_contours, norm_contours, border_width, self.height)
-        # TODO print average of nonzero ratios
-        assert len(border_ratios) == len(norm_contours)
+        border_ratios = []
+        for i, contour in enumerate(norm_contours):
+            num_border_pixels = np.count_nonzero([np.abs(distance - BORDER_DISTANCE) < border_width
+                                                  or all_contours[i][n][0] < border_width
+                                                  or all_contours[i][n][0] > self.height - border_width
+                                                  for n, distance in enumerate(contour)])
+            border_ratio = num_border_pixels / cv.arcLength(cv.convexHull(all_contours[i]), True)
+            border_ratios.append(border_ratio)
 
         # get all contours whose border ratio does not exceed a specific threshold
-        non_border_contours = get_non_border_contours(all_contours, border_threshold, border_ratios)
-        assert len(non_border_contours[0].shape) == 2
-        print(len(non_border_contours))
+        non_border_contours = [contour for i, contour in enumerate(all_contours)
+                               if border_ratios[i] <= border_threshold]
 
         # take the largest contours
-        largest_contours = pick_by_area(non_border_contours, num_clouds)
-        print(len(largest_contours))
+        areas = np.array([cv.contourArea(contour) for contour in non_border_contours])
+        max_areas = np.sort(areas)[-num_clouds:]
+        largest_contours = [non_border_contours[np.where(areas == max_area)[0][0]] for max_area in max_areas]
+
         return largest_contours
 
     def _get_clouds(self):
-
         clouds = []
         for contour in self.contours:
             mask = np.zeros((self.height, self.width), np.uint8)
