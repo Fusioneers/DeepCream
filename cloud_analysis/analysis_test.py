@@ -19,9 +19,10 @@ analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.j
 def info(n):
     cloud = analysis.clouds[n]
     # print(cloud.shape)
-    # print(cloud.edges(50, 100, 500))
-    plot(cloud.img)
+    return cloud.mean_diff_edges(10, 50, 50)
+    # plot(cloud.img)
 
 
 for n in range(5):
-    info(n)
+    var = info(n)
+    print('')

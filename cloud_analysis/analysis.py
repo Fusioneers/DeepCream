@@ -1,3 +1,5 @@
+import time
+
 import cv2 as cv
 import numpy as np
 
@@ -110,10 +112,6 @@ class Analysis:
             def roundness(self):
                 return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
 
-            def rectangularity(self):
-                _, (width, height), angle = cv.minAreaRect(self.contour)
-                return self.contour_area / (width * height)
-
             def convexity(self):
                 return self.hull_perimeter / self.contour_perimeter
 
@@ -122,6 +120,10 @@ class Analysis:
 
             def solidity(self):
                 return self.contour_area / self.hull_area
+
+            def rectangularity(self):
+                _, (width, height), angle = cv.minAreaRect(self.contour)
+                return self.contour_area / (width * height)
 
             def elongation(self):
                 _, (width, height), angle = cv.minAreaRect(self.contour)
@@ -148,7 +150,7 @@ class Analysis:
                 return data
 
             def mean(self):
-                return np.mean(self.img, axis=(0, 1), where=np.nonzero(self.mask))
+                return cv.mean(self.img, mask=self.mask)
 
             def std(self):
                 _, std = cv.meanStdDev(self.img, mask=self.mask)
@@ -168,16 +170,15 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def edges(self, num_samples, in_steps, out_steps, regr_distance=3, regr_length=1):
+        def mean_diff_edges(self, num_samples, in_steps, out_steps, regr_distance=3, regr_length=1):
             regr_vectors = np.roll(self.contour, regr_distance, axis=0) - self.contour
             regr_vectors = regr_vectors * regr_length / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
 
             perp_vectors = np.roll(regr_vectors, 1, axis=1)
             perp_vectors[:, 0] *= -1
 
-            spans = np.array([[np.floor((vector * t) + self.contour[n]).astype('int')
-                               for t in range(-in_steps, out_steps + 1)]
-                              for n, vector in enumerate(perp_vectors)])
+            spans = np.floor(np.array([np.matmul(np.arange(-in_steps, out_steps + 1)[:, np.newaxis], vector[np.newaxis])
+                                       + self.contour[n] for n, vector in enumerate(perp_vectors)])).astype('int')
 
             valid_spans = np.array([span for span in spans if
                                     np.all(np.logical_and(np.logical_and(self.height > span[:, 0], span[:, 0] >= 0),
@@ -187,4 +188,6 @@ class Analysis:
 
             edges = np.array([[self.orig[point[0], point[1]] for point in span] for span in sample_spans])
 
-            return np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
+            out = np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
+
+            return out
