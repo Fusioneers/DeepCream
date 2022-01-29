@@ -11,9 +11,11 @@ def plot(img):
     plt.show()
 
 
-path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\analysis_test.py')
+path = os.path.realpath(__file__).removesuffix(
+    r'cloud_analysis\analysis_test.py')
 
-analysis = Analysis(cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg'), 5, 0.1)
+img = cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg')
+analysis = Analysis(img, 5, 0.1)
 
 
 def info(n):

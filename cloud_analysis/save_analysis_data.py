@@ -6,7 +6,8 @@ from tqdm import tqdm
 
 from analysis import Analysis
 
-path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\save_analysis_data.py')
+path = os.path.realpath(__file__).removesuffix(
+    r'cloud_analysis\save_analysis_data.py')
 
 directory = path + r'sample_data\set_1'
 num_clouds = 5
@@ -61,4 +62,5 @@ for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
         df.loc[loc, ['mean_diff_edges_g']] = mean_diff_edges[1]
         df.loc[loc, ['mean_diff_edges_b']] = mean_diff_edges[2]
 
-df.to_csv(f'{datetime.today().strftime("%Y-%m-%d-%H-%M-%S")},num_img-{num_img},num_clouds-{num_clouds}')
+df.to_csv(f'{datetime.today().strftime("%Y-%m-%d-%H-%M-%S")},'
+          f'num_img-{num_img},num_clouds-{num_clouds}')
