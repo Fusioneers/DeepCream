@@ -9,7 +9,7 @@ from analysis import Analysis
 path = os.path.realpath(__file__).removesuffix(r'cloud_analysis\save_analysis_data.py')
 
 directory = path + r'sample_data\set_1'
-num_clouds = 3
+num_clouds = 5
 
 num_img = len(os.listdir(directory))
 

@@ -10,25 +10,21 @@ from cloud_detection.cloud_filter import CloudFilter
 BORDER_DISTANCE = 972
 
 
-def check_type(var, val, msg: str):
-    if var != val:
-        raise TypeError(msg)
-
-
-def check_value(val, msg: str):
-    if not val:
-        raise ValueError(msg)
-
-
 class Analysis:
 
     def __init__(self, orig: np.ndarray, num_clouds: int, border_threshold: float = 0.1, border_width: int = 5):
-        check_type(orig, np.ndarray, 'The image should be a numpy array')
-        check_type(len(orig.shape), 3, 'The image has to be an array of the shape (height, width, channels)')
-        check_type(orig.shape[2], 3, 'The image has to be a RGB image')
-        check_type(num_clouds, int, 'The number of clouds has to be an integer')
-        check_type(border_threshold, float, 'The threshold for the border proportion of the clouds has to be a number')
-        check_type(border_width, int, 'The width of the border has to be an integer (in pixel)')
+        if type(orig) is not np.ndarray:
+            raise TypeError('orig should be of type ndarray')
+        if len(orig.shape) != 3:
+            raise TypeError('orig should be an ndarray with the shape (height, width, channels)')
+        if orig.shape[2] != 3:
+            raise TypeError('orig should be a RGB image')
+        if type(num_clouds) is not int:
+            raise TypeError('num_clouds should be of type int')
+        if type(border_threshold) is not int and type(border_threshold) is not float:
+            raise TypeError('border_threshold should be of type int or float')
+        if type(border_width) is not int:
+            raise TypeError('border_width should be of type int')
 
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
@@ -41,7 +37,8 @@ class Analysis:
     def _get_mask(self) -> np.ndarray:
         cloud_filter = CloudFilter()
         mask, _ = cloud_filter.evaluate_image(self.orig)
-        check_value(np.any(mask), 'the image has no clouds')
+        if not np.any(mask):
+            raise ValueError('orig has no clouds')
 
         return cv.resize(mask, (self.width, self.height))
 
@@ -50,7 +47,8 @@ class Analysis:
         # get a tuple of arrays of all contours in the image
         all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
         all_contours = [np.squeeze(contour) for contour in all_contours]
-        check_value(len(all_contours) < num_clouds, 'The image has not enough clouds to return')
+        if len(all_contours) < num_clouds:
+            raise ValueError('orig has not enough clouds to return')
 
         # get the distance from the center for each point of the contours
         norm_contours = [np.linalg.norm(contour - self.center, axis=1) for contour in all_contours]
@@ -68,8 +66,8 @@ class Analysis:
         # get all contours whose border ratio does not exceed a specific threshold
         non_border_contours = [contour for i, contour in enumerate(all_contours)
                                if border_ratios[i] <= border_threshold]
-        check_value(len(non_border_contours) < num_clouds, 'The image has not enough clouds'
-                                                           'which are inside the visible area to return')
+        if len(non_border_contours) < num_clouds:
+            raise ValueError('orig has not enough clouds which are inside the visible area to return')
 
         # take the largest contours
         areas = np.array([cv.contourArea(contour) for contour in non_border_contours])
@@ -169,11 +167,16 @@ class Analysis:
 
         def mean_diff_edges(self, num_samples: int, in_steps: int, out_steps: int,
                             regr_dist: int = 3, regr_len: float = 1) -> float:
-            check_type(num_samples, int, 'num_samples should be an integer')
-            check_type(in_steps, int, 'in_steps should be an integer')
-            check_type(out_steps, int, 'out_steps should be an integer')
-            check_type(regr_dist, int, 'regr_dist should be an integer')
-            check_type(regr_len, float, 'regr_length')
+            if type(num_samples) is not int:
+                raise TypeError('num_samples should be of type int')
+            if type(in_steps) is not int:
+                raise TypeError('in_steps should be of type int')
+            if type(out_steps) is not int:
+                raise TypeError('out_steps should be of type int')
+            if type(regr_dist) is not int:
+                raise TypeError('regr_dist should be of type int')
+            if type(regr_len) is not int and type(regr_len) is not float:
+                raise TypeError('regr_len should be of type int or float')
 
             regr_vectors = np.roll(self.contour, regr_dist, axis=0) - self.contour
             regr_vectors = regr_vectors * regr_len / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
