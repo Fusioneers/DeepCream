@@ -39,17 +39,17 @@ for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
     for j, cloud in enumerate(analysis.clouds):
         loc = num_clouds * i + j
 
-        std = cloud.texture.std()
-        mean = cloud.texture.mean()
+        std = cloud.std()
+        mean = cloud.mean()
         mean_diff_edges = cloud.mean_diff_edges(10, 50, 500)
 
         df.loc[loc, ['image']] = img.name
-        df.loc[loc, ['contour_area']] = cloud.shape.contour_area
-        df.loc[loc, ['contour_perimeter']] = cloud.shape.contour_perimeter
-        df.loc[loc, ['hull_area']] = cloud.shape.hull_area
-        df.loc[loc, ['hull_perimeter']] = cloud.shape.hull_perimeter
-        df.loc[loc, ['rectangularity']] = cloud.shape.rectangularity()
-        df.loc[loc, ['elongation']] = cloud.shape.elongation()
+        df.loc[loc, ['contour_area']] = cloud.contour_area
+        df.loc[loc, ['contour_perimeter']] = cloud.contour_perimeter
+        df.loc[loc, ['hull_area']] = cloud.hull_area
+        df.loc[loc, ['hull_perimeter']] = cloud.hull_perimeter
+        df.loc[loc, ['rectangularity']] = cloud.rectangularity()
+        df.loc[loc, ['elongation']] = cloud.elongation()
 
         df.loc[loc, ['mean_r']] = mean[0]
         df.loc[loc, ['mean_g']] = mean[1]
@@ -57,7 +57,7 @@ for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
         df.loc[loc, ['std_r']] = std[0]
         df.loc[loc, ['std_g']] = std[1]
         df.loc[loc, ['std_b']] = std[2]
-        df.loc[loc, ['transparency']] = cloud.texture.transparency()
+        df.loc[loc, ['transparency']] = cloud.transparency()
         df.loc[loc, ['mean_diff_edges_r']] = mean_diff_edges[0]
         df.loc[loc, ['mean_diff_edges_g']] = mean_diff_edges[1]
         df.loc[loc, ['mean_diff_edges_b']] = mean_diff_edges[2]

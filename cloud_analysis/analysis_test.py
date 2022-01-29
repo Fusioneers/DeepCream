@@ -20,11 +20,10 @@ analysis = Analysis(img, 5, 0.1)
 
 def info(n):
     cloud = analysis.clouds[n]
-    # print(cloud.shape)
     return cloud.mean_diff_edges(10, 50, 50)
     # plot(cloud.img)
 
 
 for n in range(5):
-    var = info(n)
+    print(info(n))
     print('')
