@@ -1,5 +1,3 @@
-import time
-
 import cv2 as cv
 import numpy as np
 
@@ -15,7 +13,7 @@ BORDER_DISTANCE = 972
 
 class Analysis:
 
-    def __init__(self, orig, num_clouds, border_threshold=0.1, border_width=5):
+    def __init__(self, orig: np.ndarray, num_clouds: int, border_threshold: float = 0.1, border_width: int = 5):
         self.orig = orig
         self.height, self.width, self.channels = self.orig.shape
         self.center = np.array([self.height / 2, self.width / 2])
@@ -24,15 +22,15 @@ class Analysis:
         self.contours = self._get_contours(num_clouds, border_threshold, border_width)
         self.clouds = self._get_clouds()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'dimensions: {self.orig.shape}\nnumber of clouds: {len(self.clouds)}'
 
-    def _get_mask(self):
+    def _get_mask(self) -> np.ndarray:
         cloud_filter = CloudFilter()
         mask, _ = cloud_filter.evaluate_image(self.orig)
         return cv.resize(mask, (self.width, self.height))
 
-    def _get_contours(self, num_clouds, border_threshold, border_width):
+    def _get_contours(self, num_clouds: int, border_threshold: float, border_width: int) -> np.ndarray:
 
         # get a tuple of arrays of all contours in the image
         all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3), cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
@@ -62,7 +60,7 @@ class Analysis:
 
         return largest_contours
 
-    def _get_clouds(self):
+    def _get_clouds(self) -> list:
         clouds = []
         for contour in self.contours:
             mask = np.zeros((self.height, self.width), np.uint8)
@@ -72,7 +70,7 @@ class Analysis:
         return clouds
 
     class Cloud:
-        def __init__(self, orig, img, mask, contour):
+        def __init__(self, orig: np.ndarray, img: np.ndarray, mask: np.ndarray, contour: tuple):
             self.orig = orig
             self.height, self.width, self.channels = self.orig.shape
             self.img = img
@@ -82,12 +80,12 @@ class Analysis:
             self.shape = self.Shape(self.contour)
             self.texture = self.Texture(self.img, self.mask)
 
-        def __str__(self):
+        def __str__(self) -> str:
             return f'dimensions: {self.img.shape}\n'
 
         class Shape:
 
-            def __init__(self, contour):
+            def __init__(self, contour: tuple):
                 self.contour = contour
                 self.contour_perimeter = cv.arcLength(self.contour, True)
                 self.contour_area = cv.contourArea(self.contour)
@@ -95,7 +93,7 @@ class Analysis:
                 self.hull_perimeter = cv.arcLength(self.hull, True)
                 self.hull_area = cv.contourArea(self.hull)
 
-            def __str__(self):
+            def __str__(self) -> str:
                 out = [f'Shape Analysis:',
                        f'   contour perimeter: {self.contour_perimeter}',
                        f'   hull perimeter: {self.hull_perimeter}',
@@ -109,55 +107,55 @@ class Analysis:
                        f'   elongation: {self.elongation()}', ]
                 return '\n'.join(out)
 
-            def roundness(self):
+            def roundness(self) -> float:
                 return (4 * np.pi * self.contour_area) / (self.hull_perimeter ** 2)
 
-            def convexity(self):
+            def convexity(self) -> float:
                 return self.hull_perimeter / self.contour_perimeter
 
-            def compactness(self):
+            def compactness(self) -> float:
                 return (4 * np.pi * self.contour_area) / (self.contour_perimeter ** 2)
 
-            def solidity(self):
+            def solidity(self) -> float:
                 return self.contour_area / self.hull_area
 
-            def rectangularity(self):
+            def rectangularity(self) -> float:
                 _, (width, height), angle = cv.minAreaRect(self.contour)
                 return self.contour_area / (width * height)
 
-            def elongation(self):
+            def elongation(self) -> float:
                 _, (width, height), angle = cv.minAreaRect(self.contour)
                 return min(width, height) / max(width, height)
 
         class Texture:
-            def __init__(self, img, mask):
+            def __init__(self, img: np.ndarray, mask: np.ndarray):
                 self.img = img
                 self.mask = mask
                 self.grey = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
 
-            def __str__(self):
+            def __str__(self) -> str:
                 out = ['Texture Analysis:',
                        f'   mean: {self.mean()}',
                        f'   standard deviation: {self.std()}',
                        f'   transparency: {self.transparency()}', ]
                 return '\n'.join(out)
 
-            def distribution(self):
+            def distribution(self) -> list:
                 data = []
                 for n in range(3):
                     channel = np.array(self.img[:, :, n].ravel())
                     data.append(channel[channel.nonzero()])
                 return data
 
-            def mean(self):
+            def mean(self) -> list:
                 return cv.mean(self.img, mask=self.mask)
 
-            def std(self):
+            def std(self) -> list:
                 _, std = cv.meanStdDev(self.img, mask=self.mask)
                 std = (std[0][0], std[1][0], std[2][0])
                 return std
 
-            def transparency(self):
+            def transparency(self) -> float:
                 sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
                 inverse = np.where(sat == 0, sat, 255 - sat)
                 return np.sum(inverse) / np.count_nonzero(inverse)
@@ -170,7 +168,9 @@ class Analysis:
             # unknown: surface temperature and humidity - weather stations on earth?
             pass
 
-        def mean_diff_edges(self, num_samples, in_steps, out_steps, regr_distance=3, regr_length=1):
+        def mean_diff_edges(self, num_samples: int, in_steps: int, out_steps: int,
+                            regr_distance: int = 3, regr_length: float = 1) -> float:
+
             regr_vectors = np.roll(self.contour, regr_distance, axis=0) - self.contour
             regr_vectors = regr_vectors * regr_length / np.tile(np.linalg.norm(regr_vectors, axis=1), (2, 1)).T
 

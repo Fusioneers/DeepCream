@@ -1,7 +1,5 @@
 import os
 from datetime import datetime
-from time import time
-
 import cv2 as cv
 import pandas as pd
 from tqdm import tqdm
