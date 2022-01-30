@@ -1,4 +1,5 @@
 import cv2
+
 from cloud_detection.cloud_filter import CloudFilter
 
 cf = CloudFilter(weight_ai=0.8)

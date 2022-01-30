@@ -1,5 +1,3 @@
-import os
-
 import cv2 as cv
 import matplotlib.pyplot as plt
 
@@ -11,15 +9,12 @@ def plot(img):
     plt.show()
 
 
-path = os.path.realpath(__file__).removesuffix(
-    r'cloud_analysis\analysis_test.py')
-
-img = cv.imread(path + r'sample_data\Data\zz_astropi_1_photo_364.jpg')
-analysis = Analysis(img, 5, 0.1)
+image = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
+analysis = Analysis(image, 5, 0.1)
 
 
-def info(n):
-    cloud = analysis.clouds[n]
+def info(i):
+    cloud = analysis.clouds[i]
     return cloud.mean_diff_edges(10, 50, 50)
     # plot(cloud.img)
 

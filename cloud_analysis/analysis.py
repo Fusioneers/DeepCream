@@ -25,6 +25,8 @@ from cloud_detection.cloud_filter import CloudFilter
 from constants import BORDER_DISTANCE, BORDER_WIDTH
 
 
+# TODO add more exception clauses and raises
+
 class Analysis:
     """A class for analysing clouds in an image taken with the AstroPi.
 
@@ -53,13 +55,15 @@ class Analysis:
                 A list of cloud objects resembling each a cloud in the image.
     """
 
-    def __init__(self, orig: np.ndarray, num_clouds: int,
+    def __init__(self, orig: np.ndarray,
+                 num_clouds: int,
                  border_threshold: float = 0.1):
         """Initialises Analysis.
 
         Args:
             orig:
-                The original image which is passed during initialisation.
+                The original RGB image which is passed during initialisation.
+                It should have the shape (height, width, channels).
             num_clouds:
                 The number of clouds which are created.
             border_threshold:
@@ -69,19 +73,6 @@ class Analysis:
                 the visible area to be recognised.
         """
 
-        if type(orig) is not np.ndarray:
-            raise TypeError('orig should be of type ndarray')
-        if len(orig.shape) != 3:
-            raise TypeError('orig should have 3 channels')
-        if orig.shape[2] != 3:
-            raise TypeError('orig should be a RGB image')
-        if type(num_clouds) is not int:
-            raise TypeError('num_clouds should be of type int')
-        if type(border_threshold) is not int:
-            if type(border_threshold) is not float:
-                raise TypeError(
-                    'border_threshold should be of type int or float')
-
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
 
@@ -90,20 +81,32 @@ class Analysis:
         self.clouds = self._get_clouds()
 
     def _get_mask(self) -> np.ndarray:
-        """Gets the cloud mask from CloudFilter."""
+        """Gets the cloud mask from CloudFilter.
+
+        Returns:
+            A numpy array which corresponds to an image which has the same
+            height and width as orig, with a 255 for a pixel which is
+            estimated to be a cloud and a 0 otherwise. It has the same shape
+            as orig, but only a single channel i.e. shape (height, width).
+
+        Raises:
+            ValueError: Orig has no clouds.
+        """
         cloud_filter = CloudFilter()
         mask, _ = cloud_filter.evaluate_image(self.orig)
         if not np.any(mask):
-            raise ValueError('orig has no clouds')
+            raise ValueError('Orig has no clouds.')
 
         return cv.resize(mask, (self.width, self.height))
 
     def _get_contours(self, num_clouds: int,
-                      border_threshold: float) -> np.ndarray:
+                      border_threshold: float) -> tuple[np.ndarray]:
         """Gets the contours of the clouds.
 
-        TODO function description
-
+        This function computes the contours of orig. those get filtered by the
+        proportion of pixels they share with the edge of the visible area to
+        ensure that only whole clouds get analysed. The num_clouds largest
+        clouds (sorted by area) are then returned.
 
         Args:
             num_clouds:
@@ -117,6 +120,11 @@ class Analysis:
         Returns:
             A tuple containing numpy arrays which represent the coordinates of
             the contours.
+
+        Raises:
+            ValueError: Orig has not enough clouds to return.
+            ValueError: Orig has not enough clouds which are inside the visible
+                area to return.
         """
 
         # TODO border_threshold 0 for no validation
@@ -124,7 +132,7 @@ class Analysis:
                                           cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
         all_contours = [np.squeeze(contour) for contour in all_contours]
         if len(all_contours) < num_clouds:
-            raise ValueError('orig has not enough clouds to return')
+            raise ValueError('Orig has not enough clouds to return.')
 
         center = np.array([self.height / 2, self.width / 2])
         norm_contours = [np.linalg.norm(contour - center, axis=1)
@@ -133,7 +141,7 @@ class Analysis:
         border_ratios = []
         for i, contour in enumerate(norm_contours):
             num_border_pixels = np.count_nonzero(
-                [np.abs(distance - BORDER_DISTANCE) < BORDER_WIDTH
+                [BORDER_DISTANCE - distance > BORDER_WIDTH
                  or all_contours[i][n][0] < BORDER_WIDTH
                  or all_contours[i][n][0] > self.height - BORDER_WIDTH
                  for n, distance in enumerate(contour)])
@@ -145,8 +153,8 @@ class Analysis:
                                enumerate(all_contours)
                                if border_ratios[i] <= border_threshold]
         if len(non_border_contours) < num_clouds:
-            raise ValueError('orig has not enough clouds which are inside the '
-                             'visible area to return')
+            raise ValueError('Orig has not enough clouds which are inside the '
+                             'visible area to return.')
 
         areas = np.array(
             [cv.contourArea(contour) for contour in non_border_contours])
@@ -158,7 +166,7 @@ class Analysis:
         return largest_contours
 
     def _get_clouds(self) -> list:
-        """Creates a list of the clouds."""
+        """Creates a list of clouds."""
 
         clouds = []
         for contour in self.contours:
@@ -169,14 +177,72 @@ class Analysis:
         return clouds
 
     class Cloud:
-        def __init__(self, orig: np.ndarray, img: np.ndarray, mask: np.ndarray,
-                     contour: tuple):
+        """A single cloud in orig.
+
+        This class corresponds to a single detected cloud. It has multiple
+        fields and methods to gain information about the cloud.
+
+        Attributes:
+            orig:
+                The original image which is passed during initialisation.
+            height:
+                The height in pixels of orig.
+            width:
+                The width in pixels of orig.
+            img:
+                A mostly black image with only the cloud itself visible. It
+                can also be obtained by combining orig with mask.
+            mask:
+                A numpy array which corresponds to an image which has the same
+                height and width as orig, with a 255 for a pixel which belongs
+                cloud and a 0 otherwise. It has the same shape as orig, but
+                only a single channel.
+            contour:
+                A numpy array containing the coordinates of the edge of the
+                cloud.
+            contour_perimeter:
+                The perimeter of the contour.
+            contour_area:
+                The area of the contour.
+            hull:
+                a numpy array similar to contour. It represents the convex
+                hull around contour.
+            hull_perimeter:
+                The perimeter of the hull.
+            hull_area:
+                The area of the hull.
+        """
+
+        def __init__(self, orig: np.ndarray,
+                     img: np.ndarray,
+                     mask: np.ndarray,
+                     contour: np.ndarray):
+            """Initialises the cloud.
+
+            Args:
+                orig:
+                    The original RGB image which is passed during
+                    initialisation. It should have the shape
+                    (height, width, channels).
+                img:
+                    A mostly black image with only the cloud itself visible.
+                    It can also be obtained by combining orig with mask.
+                mask:
+                    A numpy array which corresponds to an image which has the
+                    same height and width as orig, with a 255 for a pixel which
+                    belongs cloud and a 0 otherwise. It has the same shape as
+                    orig, but only a single channel.
+                contour:
+                    A numpy array containing the coordinates of the edge of the
+                    cloud.
+            """
+
             self.orig = orig
             self.height, self.width, self.channels = self.orig.shape
             self.img = img
             self.mask = mask
-            self.contour = contour
 
+            self.contour = contour
             self.contour_perimeter = cv.arcLength(self.contour, True)
             self.contour_area = cv.contourArea(self.contour)
             self.hull = cv.convexHull(self.contour)
@@ -184,44 +250,57 @@ class Analysis:
             self.hull_area = cv.contourArea(self.hull)
 
         def roundness(self) -> float:
+            """Gets the roundness of the cloud."""
             return (4 * np.pi * self.contour_area) / (
                     self.hull_perimeter ** 2)
 
         def convexity(self) -> float:
+            """Gets the convexity of the cloud."""
             return self.hull_perimeter / self.contour_perimeter
 
         def compactness(self) -> float:
+            """Gets the compactness of the cloud."""
             return (4 * np.pi * self.contour_area) / (
                     self.contour_perimeter ** 2)
 
         def solidity(self) -> float:
+            """Gets the solidity of the cloud."""
             return self.contour_area / self.hull_area
 
         def rectangularity(self) -> float:
+            """Gets the rectangularity of the cloud."""
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return self.contour_area / (width * height)
 
         def elongation(self) -> float:
+            """Gets the elongation of the cloud."""
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return min(width, height) / max(width, height)
 
-        def distribution(self) -> list:
-            data = []
-            for n in range(3):
-                channel = np.array(self.img[:, :, n].ravel())
-                non_zero = channel[channel.nonzero()]
-                data.append(non_zero)
-            return np.array(data)
-
         def mean(self) -> list:
+            """Gets the mean of each channel inside the cloud"""
             return cv.mean(self.img, mask=self.mask)
 
         def std(self) -> list:
+            """Gets the standard deviation of each channel inside the cloud."""
             _, std = cv.meanStdDev(self.img, mask=self.mask)
             std = (std[0][0], std[1][0], std[2][0])
             return std
 
         def transparency(self) -> float:
+            """Gets the transparency of the cloud.
+
+            The transparency is computed by averaging the deviation of each
+            pixel in the cloud from pure white. This is less effective for
+            light ground such as snow or if the cloud itself is colorful e.g.
+            at sunset. Note that it is based on the saturation of an HSV image
+            of the cloud.
+
+            Returns:
+                A value between 0 and 255. 255 means that the cloud is perfect
+                grey, while 0 means a very colorful cloud.
+            """
+
             sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
             inverse = np.where(sat == 0, sat, 255 - sat)
             if np.count_nonzero(inverse) != 0:
@@ -230,27 +309,68 @@ class Analysis:
                 out = 0
             return out
 
-        def mean_diff_edges(self, num_samples: int, in_steps: int,
-                            out_steps: int, regr_dist: int = 3,
-                            regr_len: float = 1) -> float:
-            if type(num_samples) is not int:
-                raise TypeError('num_samples should be of type int')
-            if type(in_steps) is not int:
-                raise TypeError('in_steps should be of type int')
-            if type(out_steps) is not int:
-                raise TypeError('out_steps should be of type int')
-            if type(regr_dist) is not int:
-                raise TypeError('regr_dist should be of type int')
-            if type(regr_len) is not int:
-                if type(regr_len) is not float:
-                    raise TypeError('regr_len should be of type int or float')
+        def edges(self,
+                  num_samples: int,
+                  in_steps: int,
+                  out_steps: int,
+                  appr_dist: int = 3,
+                  step_len: float = 2) -> np.ndarray:
+            """Gets samples of the surroundings of the contour of the cloud.
 
-            regr_vec = np.roll(self.contour, regr_dist, axis=0)
-            regr_vec -= self.contour
-            regr_vec_norm = np.linalg.norm(regr_vec, axis=1)
-            regr_vec = regr_vec * regr_len / np.tile(regr_vec_norm, (2, 1)).T
+            First, perpendicular vectors to the contour are created. Those are
+            estimated by computing the tangents for each pixel on the contour.
+            Because pixels are discrete, they are actually secants from the
+            pixel to the appr_dist-th one next to it. From those vectors the
+            perpendicular vectors with length step_len are gained. For each
+            perpendicular vector the span is computed i.e. an array of points
+            which are a multiple of the original vector. Note that in_steps is
+            the number of steps the span reaches into cloud from the boundary
+            and out_steps the number of steps out of the cloud. These steps
+            have the length step_len. Then, samples of the spans, which lie
+            fully inside the visible area are returned.
 
-            perp_vec = np.roll(regr_vec, 1, axis=1)
+            # TODO usage example
+
+            Args:
+                num_samples:
+                    The number of samples of the edge to be returned.
+                in_steps:
+                    The number of steps the span reaches into cloud from the
+                    boundary excluding the boundary itself.
+                out_steps:
+                    The number of steps the span reaches out of the cloud from
+                    the boundary excluding the boundary itself.
+                appr_dist:
+                    The contour approximation vectors i.e. tangents of the
+                    contour are estimated by a secant from the point itself to
+                    the appr_dist next point. A high value of e.g. 10 means
+                    that the approximation may be more accurate, while for a
+                    very rough boundary it is better to choose a lower value.
+                    As a negative value has the effect of swapping in_steps and
+                    out_steps, it should be avoided for most use cases. A value
+                    of 0 returns an array of copies of the contour itself, and
+                    should therefore not be used.
+                step_len:
+                    The distance between each point in the span. A low value
+                    gives a more dense overview of the edge, while a higher one
+                    yields a wider range. Note that for a value of 1 some
+                    points can be the same. As a negative value has the effect
+                    of swapping in_steps and out_steps, it should be avoided
+                    for most use cases. A value of 0 returns an array of copies
+                    of the contour itself, and should therefore not be used.
+
+            Returns:
+                A numpy array of shape
+                (num_samples, in_steps + out_steps + 1, 3), which is a folded
+                representative sample of the edge of the cloud.
+            """
+
+            appr_vec = np.roll(self.contour, appr_dist, axis=0)
+            appr_vec -= self.contour
+            appr_vec_norm = np.linalg.norm(appr_vec, axis=1)
+            appr_vec = appr_vec * step_len / np.tile(appr_vec_norm, (2, 1)).T
+
+            perp_vec = np.roll(appr_vec, 1, axis=1)
             perp_vec[:, 0] *= -1
 
             span_range = np.arange(-in_steps, out_steps + 1)[:, np.newaxis]
@@ -258,15 +378,18 @@ class Analysis:
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
 
-            def is_in_image(span):
-                return (np.all(self.height > span[:, 0])
-                        and np.all(span[:, 0] >= 0)
-                        and np.all(self.width > span[:, 1])
-                        and np.all(span[:, 1] >= 0))
+            center = np.array([self.height / 2, self.width / 2])
+            norms = [np.linalg.norm(span - center, axis=1)
+                     for span in spans]
 
-            valid_spans = [span for span in spans if is_in_image(span)]
+            valid_spans = [span for i, span in enumerate(spans) if
+                           np.all(norms[i] - BORDER_DISTANCE < -BORDER_WIDTH)
+                           and np.all(span[:, 0] > BORDER_WIDTH)
+                           and np.all(span[:, 0] < self.height - BORDER_WIDTH)]
+
             valid_spans = np.array(valid_spans)
 
+            # TODO raise when no valid_spans
             idx = np.linspace(0, valid_spans.shape[0] - 1, num=num_samples)
             sample_spans = valid_spans[idx.astype('int')]
 
@@ -274,6 +397,27 @@ class Analysis:
                                for point in span]
                               for span in sample_spans])
 
-            out = np.mean(np.diff(np.mean(edges, axis=0), axis=0), axis=0)
+            return edges
 
-            return out
+        def mean_diff_edges(self,
+                            num_samples: int,
+                            in_steps: int,
+                            out_steps: int,
+                            appr_dist: int = 3,
+                            appr_len: float = 2) -> np.ndarray:
+            """A measurement for the roughness of the edge of the cloud.
+
+            The function computes an average roughness of the edge of the cloud
+            by averaging the absolute difference of the pixels near the
+            boundary in each channel. For a more detailed description of the
+            functionality and the arguments see Cloud.edges.
+
+            Returns:
+                A numpy array with the average change from one pixel to another
+                in the direction of the boundary. It has shape 3.
+            """
+            edges = self.edges(num_samples, in_steps, out_steps, appr_dist,
+                               appr_len)
+
+            return np.mean(np.abs(np.diff(np.mean(edges, axis=0), axis=0),
+                                  axis=0)) * appr_len
