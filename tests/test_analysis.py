@@ -7,6 +7,20 @@ path = os.path.normpath(os.getcwd() + os.sep + os.pardir
 print(path)
 
 
+def get_filepaths(directory):
+    file_paths = []
+
+    for root, directories, files in os.walk(directory):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            file_paths.append(filepath)
+
+    return file_paths
+
+
+print(get_filepaths(os.path.normpath(os.getcwd() + os.sep + os.pardir)))
+
+
 def test_is_not_none():
     with open(path) as f:
         print(f.name)
