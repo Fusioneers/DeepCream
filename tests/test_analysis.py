@@ -1,9 +1,13 @@
+import os
 import cv2 as cv
 import cloud_analysis.analysis
 
+path = os.path.normpath(os.getcwd() + os.sep + os.pardir)
+print(path)
+
 
 def test_is_not_none():
-    img = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
+    img = cv.imread('sample_data\\Data\\zz_astropi_1_photo_364.jpg')
     assert img is not None
 
     analysis = cloud_analysis.analysis.Analysis(img, 5, 0.1)
