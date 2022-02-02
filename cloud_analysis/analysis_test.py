@@ -1,3 +1,5 @@
+import time
+
 import cv2 as cv
 import matplotlib.pyplot as plt
 
@@ -12,13 +14,13 @@ def plot(img):
 image = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
 analysis = Analysis(image, 5, 0.1)
 
+print(analysis.clouds[1].convexity())
 
-def info(i):
-    cloud = analysis.clouds[i]
-    return cloud.mean_diff_edges(10, 50, 50)
-    # plot(cloud.img)
-
-
-for n in range(5):
-    print(info(n))
-    print('')
+# dtime = time.time()
+# for cloud in analysis.clouds:
+#     try:
+#         print(cloud.mean_diff_edges(3, 50, 500))
+#     except Exception:
+#         print(Exception)
+#
+# print(f'time: {time.time() - dtime}')

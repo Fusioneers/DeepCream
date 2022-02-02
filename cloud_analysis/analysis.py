@@ -21,17 +21,16 @@ import cv2 as cv
 import numpy as np
 
 from cloud_detection.cloud_filter import CloudFilter
-# TODO save only the proportion, get const by image size
-from constants import BORDER_DISTANCE, BORDER_WIDTH
 
 
 # TODO add more exception clauses and raises
+
 
 class Analysis:
     """A class for analysing clouds in an image taken with the AstroPi.
 
         This class creates a number of clouds from an image given at its
-        initialisation. Those are objects containing multiple attributes and
+        initialisation. These are objects containing multiple attributes and
         methods which return information about the nature of the cloud.
 
         Attributes:
@@ -77,8 +76,10 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = self._get_mask()
-        self.contours = self._get_contours(num_clouds, border_threshold)
-        self.clouds = self._get_clouds()
+        self.contours = self._get_contours()
+        self.clouds = self._get_clouds(self.contours)
+
+    # TODO update documentation accordingly to the cloud border changes
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -99,8 +100,7 @@ class Analysis:
 
         return cv.resize(mask, (self.width, self.height))
 
-    def _get_contours(self, num_clouds: int,
-                      border_threshold: float) -> tuple[np.ndarray]:
+    def _get_contours(self) -> tuple[np.ndarray]:
         """Gets the contours of the clouds.
 
         This function computes the contours of orig. those get filtered by the
@@ -127,54 +127,37 @@ class Analysis:
                 area to return.
         """
 
-        # TODO border_threshold 0 for no validation
-        all_contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
-                                          cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
-        all_contours = [np.squeeze(contour) for contour in all_contours]
-        if len(all_contours) < num_clouds:
-            raise ValueError('Orig has not enough clouds to return.')
+        contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
+                                      cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+        contours = [np.squeeze(contour) for contour in contours]
 
-        center = np.array([self.height / 2, self.width / 2])
-        norm_contours = [np.linalg.norm(contour - center, axis=1)
-                         for contour in all_contours]
+        return contours
 
-        border_ratios = []
-        for i, contour in enumerate(norm_contours):
-            num_border_pixels = np.count_nonzero(
-                [BORDER_DISTANCE - distance > BORDER_WIDTH
-                 or all_contours[i][n][0] < BORDER_WIDTH
-                 or all_contours[i][n][0] > self.height - BORDER_WIDTH
-                 for n, distance in enumerate(contour)])
-            border_ratio = num_border_pixels / cv.arcLength(
-                cv.convexHull(all_contours[i]), True)
-            border_ratios.append(border_ratio)
-
-        non_border_contours = [contour for i, contour in
-                               enumerate(all_contours)
-                               if border_ratios[i] <= border_threshold]
-        if len(non_border_contours) < num_clouds:
-            raise ValueError('Orig has not enough clouds which are inside the '
-                             'visible area to return.')
-
-        areas = np.array(
-            [cv.contourArea(contour) for contour in non_border_contours])
-        max_areas = np.sort(areas)[-num_clouds:]
-        largest_contours = [
-            non_border_contours[np.where(areas == max_area)[0][0]]
-            for max_area in max_areas]
-
-        return largest_contours
-
-    def _get_clouds(self) -> list:
+    def _get_clouds(self, contours) -> list:
         """Creates a list of clouds."""
 
         clouds = []
-        for contour in self.contours:
+        for contour in contours:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             clouds.append(self.Cloud(self.orig, img, mask, contour))
         return clouds
+
+    # TODO combine/write those methods according to the comments below
+
+    def _get_valid_clouds(self, clouds):
+        pass
+        # TODO instead of filtering by the border proportion on the circle
+        #  (because it doesn't fit) get the border contrast by the edges method
+        #   and discard the ones with a too high contrast
+
+    def _choose_by_size(self, threshold):
+        # return self.all_clouds[
+        #     np.where(self.all_clouds[:].contour_area >= threshold)[0][0]]
+        pass
+        # TODO sort first the clouds by size then apply edges until the
+        #  threshold is reached
 
     class Cloud:
         """A single cloud in orig.
@@ -346,18 +329,13 @@ class Analysis:
                     the appr_dist next point. A high value of e.g. 10 means
                     that the approximation may be more accurate, while for a
                     very rough boundary it is better to choose a lower value.
-                    As a negative value has the effect of swapping in_steps and
-                    out_steps, it should be avoided for most use cases. A value
-                    of 0 returns an array of copies of the contour itself, and
-                    should therefore not be used.
+                    A value smaller than 1 should be avoided.
                 step_len:
                     The distance between each point in the span. A low value
                     gives a more dense overview of the edge, while a higher one
                     yields a wider range. Note that for a value of 1 some
-                    points can be the same. As a negative value has the effect
-                    of swapping in_steps and out_steps, it should be avoided
-                    for most use cases. A value of 0 returns an array of copies
-                    of the contour itself, and should therefore not be used.
+                    points can be the same. A value smaller than 1 should be
+                    avoided.
 
             Returns:
                 A numpy array of shape
@@ -382,14 +360,17 @@ class Analysis:
             norms = [np.linalg.norm(span - center, axis=1)
                      for span in spans]
 
-            valid_spans = [span for i, span in enumerate(spans) if
-                           np.all(norms[i] - BORDER_DISTANCE < -BORDER_WIDTH)
-                           and np.all(span[:, 0] > BORDER_WIDTH)
-                           and np.all(span[:, 0] < self.height - BORDER_WIDTH)]
+            valid_spans = [span for span in spans if
+                           np.all(span[:, 0] > 0)
+                           and np.all(span[:, 0] < self.height)
+                           and np.all(span[:, 1] > 0)
+                           and np.all(span[:, 1] < self.width)]
 
             valid_spans = np.array(valid_spans)
 
-            # TODO raise when no valid_spans
+            # TODO remove sampling
+
+            # TODO raise when too few valid_spans
             idx = np.linspace(0, valid_spans.shape[0] - 1, num=num_samples)
             sample_spans = valid_spans[idx.astype('int')]
 
@@ -404,7 +385,7 @@ class Analysis:
                             in_steps: int,
                             out_steps: int,
                             appr_dist: int = 3,
-                            appr_len: float = 2) -> np.ndarray:
+                            step_len: float = 2) -> np.ndarray:
             """A measurement for the roughness of the edge of the cloud.
 
             The function computes an average roughness of the edge of the cloud
@@ -417,7 +398,7 @@ class Analysis:
                 in the direction of the boundary. It has shape 3.
             """
             edges = self.edges(num_samples, in_steps, out_steps, appr_dist,
-                               appr_len)
+                               step_len)
 
-            return np.mean(np.abs(np.diff(np.mean(edges, axis=0), axis=0),
-                                  axis=0)) * appr_len
+            return np.mean(
+                np.abs(np.diff(np.mean(edges, axis=0), axis=0))) * step_len
