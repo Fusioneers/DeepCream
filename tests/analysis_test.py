@@ -1,12 +1,11 @@
 import cv2 as cv
-
-from ..cloud_analysis.analysis import Analysis
+import cloud_analysis.analysis
 
 image = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
 
 
 def test_is_not_none():
-    analysis = Analysis(image, 5, 0.1)
+    analysis = cloud_analysis.analysis.Analysis(image, 5, 0.1)
     assert analysis is not None
     assert analysis.clouds is not None
     assert analysis.orig is not None
