@@ -9,8 +9,6 @@ path = os.path.normpath(os.path.join(os.getcwd(), os.path.normpath(
 
 
 def test_is_not_none():
-    with open(path) as f:
-        print(f.name)
     img = cv.imread(path)
     assert img is not None
 
