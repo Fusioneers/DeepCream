@@ -1,6 +1,6 @@
 import cv2 as cv
 
-from analysis import Analysis
+from ..cloud_analysis.analysis import Analysis
 
 image = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
 
