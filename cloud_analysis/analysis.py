@@ -134,7 +134,7 @@ class Analysis:
         return contours
 
     def _get_clouds(self, contours) -> list:
-        """Creates a list of clouds."""
+        """Creates a list of clouds sorted by area from large to small."""
 
         clouds = []
         for contour in contours:
@@ -142,22 +142,25 @@ class Analysis:
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             clouds.append(self.Cloud(self.orig, img, mask, contour))
-        return clouds
+        return sorted(clouds, key=lambda x: x.contour_area, reverse=True)
 
     # TODO combine/write those methods according to the comments below
 
-    def _get_valid_clouds(self, clouds):
-        pass
+    def _get_valid_clouds(self,
+                          clouds: list,
+                          min_size: int,
+                          border_width: int,
+                          contrast_threshold: float):
+
         # TODO instead of filtering by the border proportion on the circle
         #  (because it doesn't fit) get the border contrast by the edges method
-        #   and discard the ones with a too high contrast
-
-    def _choose_by_size(self, threshold):
-        # return self.all_clouds[
-        #     np.where(self.all_clouds[:].contour_area >= threshold)[0][0]]
-        pass
-        # TODO sort first the clouds by size then apply edges until the
+        #  and discard the ones with a too high contrast
+        #  sort first the clouds by size then apply edges until the
         #  threshold is reached
+
+        def get_contrast():
+            for cloud in clouds:
+                out = cloud.mean_diff_edges()
 
     class Cloud:
         """A single cloud in orig.
@@ -293,7 +296,6 @@ class Analysis:
             return out
 
         def edges(self,
-                  num_samples: int,
                   in_steps: int,
                   out_steps: int,
                   appr_dist: int = 3,
@@ -368,20 +370,13 @@ class Analysis:
 
             valid_spans = np.array(valid_spans)
 
-            # TODO remove sampling
-
-            # TODO raise when too few valid_spans
-            idx = np.linspace(0, valid_spans.shape[0] - 1, num=num_samples)
-            sample_spans = valid_spans[idx.astype('int')]
-
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
-                              for span in sample_spans])
+                              for span in valid_spans])
 
             return edges
 
         def mean_diff_edges(self,
-                            num_samples: int,
                             in_steps: int,
                             out_steps: int,
                             appr_dist: int = 3,
@@ -397,7 +392,7 @@ class Analysis:
                 A numpy array with the average change from one pixel to another
                 in the direction of the boundary. It has shape 3.
             """
-            edges = self.edges(num_samples, in_steps, out_steps, appr_dist,
+            edges = self.edges(in_steps, out_steps, appr_dist,
                                step_len)
 
             return np.mean(
