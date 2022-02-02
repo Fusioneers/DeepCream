@@ -76,7 +76,6 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = self._get_mask()
-        assert 0 == 1  # for debugging
         self.contours = self._get_contours()
         self.clouds = self._get_clouds(self.contours)
 
