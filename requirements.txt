@@ -1,6 +1,5 @@
 opencv-python
 numpy
-time
 PIL
 datetime
 pandas
