@@ -1,20 +1,13 @@
-import time
-
 import cv2 as cv
-import matplotlib.pyplot as plt
 
 from analysis import Analysis
 
-
-def plot(img):
-    plt.imshow(cv.cvtColor(img, cv.COLOR_RGB2BGR))
-    plt.show()
-
-
 image = cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg')
-analysis = Analysis(image, 5, 0.1)
 
-print(analysis.clouds[1].convexity())
+
+def test_analysis_init():
+    analysis = Analysis(image, 5, 0.1)
+    assert analysis is not None
 
 # dtime = time.time()
 # for cloud in analysis.clouds:
