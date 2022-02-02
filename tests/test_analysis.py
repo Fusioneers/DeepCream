@@ -2,8 +2,9 @@ import os
 import cv2 as cv
 import cloud_analysis.analysis
 
-path = os.path.normpath(os.getcwd() + os.sep + os.pardir
-                        + '/sample_data/Data/zz_astropi_1_photo_364.jpg')
+path = os.path.normpath(
+    os.getcwd() + os.sep + os.pardir
+    + 'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg')
 print(path)
 
 
@@ -18,7 +19,7 @@ def get_filepaths(directory):
     return file_paths
 
 
-print(get_filepaths(os.path.normpath(os.getcwd() + os.sep + os.pardir)))
+# print(get_filepaths(os.path.normpath(os.getcwd() + os.sep + os.pardir)))
 
 
 def test_is_not_none():
