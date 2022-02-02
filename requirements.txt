@@ -1,6 +1,6 @@
 opencv-python
 numpy
-PIL
+Pillow
 datetime
 pandas
 tqdm
