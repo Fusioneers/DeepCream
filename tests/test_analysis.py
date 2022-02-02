@@ -2,12 +2,13 @@ import os
 import cv2 as cv
 import cloud_analysis.analysis
 
-path = os.path.normpath(os.getcwd() + os.sep + os.pardir)
+path = os.path.normpath(os.getcwd() + os.sep + os.pardir
+                        + '/sample_data/Data/zz_astropi_1_photo_364.jpg')
 print(path)
 
 
 def test_is_not_none():
-    img = cv.imread('sample_data\\Data\\zz_astropi_1_photo_364.jpg')
+    img = cv.imread(path)
     assert img is not None
 
     analysis = cloud_analysis.analysis.Analysis(img, 5, 0.1)
@@ -38,3 +39,6 @@ def test_is_not_none():
     assert all([cloud.edges(50, 50) is not None for cloud in analysis.clouds])
     assert all([cloud.mean_diff_edges(50, 50) is not None for cloud in
                 analysis.clouds])
+
+
+test_is_not_none()
