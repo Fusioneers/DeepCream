@@ -4,8 +4,9 @@ import cv2 as cv
 
 import cloud_analysis.analysis
 
-path = os.path.normpath(os.path.join(os.getcwd(), os.path.normpath(
-    'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg')))
+path = os.path.normpath(os.path.join(os.path.pardir, os.path.normpath(
+    'sample_data/Data/zz_astropi_1_photo_364.jpg')))
+print(path)
 
 
 def test_is_not_none():
@@ -34,9 +35,12 @@ def test_is_not_none():
     assert all(
         [cloud.rectangularity() is not None for cloud in analysis.clouds])
     assert all([cloud.elongation() is not None for cloud in analysis.clouds])
-    assert all([cloud.mean() is not None for cloud in analysis.clouds])
-    assert all([cloud.std() is not None for cloud in analysis.clouds])
+    assert all([cloud.mean() for cloud in analysis.clouds])
+    assert all([cloud.std() for cloud in analysis.clouds])
     assert all([cloud.transparency() is not None for cloud in analysis.clouds])
-    assert all([cloud.edges(50, 50) is not None for cloud in analysis.clouds])
+    assert all([cloud.edges(50, 50).size for cloud in analysis.clouds])
     assert all([cloud.mean_diff_edges(50, 50) is not None for cloud in
                 analysis.clouds])
+
+
+test_is_not_none()
