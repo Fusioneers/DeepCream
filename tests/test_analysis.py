@@ -4,9 +4,8 @@ import cv2 as cv
 
 import cloud_analysis.analysis
 
-path = os.path.normpath(
-    os.getcwd() + os.sep + os.pardir + os.path.normpath(
-        'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg'))
+path = os.path.normpath(os.path.join(os.getcwd(), os.pardir, os.path.normpath(
+    'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg')))
 print(path)
 
 
