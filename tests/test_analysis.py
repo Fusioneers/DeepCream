@@ -6,7 +6,7 @@ import cloud_analysis.analysis
 
 ########## VERY FRAGILE ##########
 path = os.path.normpath(os.path.join(os.getcwd(), os.path.normpath(
-    'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg')))
+    'sample_data/Data/zz_astropi_1_photo_364.jpg')))
 ########## VERY FRAGILE ##########
 
 
