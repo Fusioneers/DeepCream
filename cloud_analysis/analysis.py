@@ -19,7 +19,6 @@ properties such as convexity or transparency can be read off.
 
 import cv2 as cv
 import numpy as np
-from matplotlib import pyplot as plt
 
 from cloud_detection.cloud_filter import CloudFilter
 
