@@ -6,6 +6,7 @@ import cloud_analysis.analysis
 
 path = os.path.normpath(os.path.join(os.getcwd(), os.path.normpath(
     'DeepCream/sample_data/Data/zz_astropi_1_photo_364.jpg')))
+print(path)
 
 
 def test_is_not_none():
