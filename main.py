@@ -1,3 +1,9 @@
 from code.__init__ import log_path
+from code.constants import time_format, logging_format
+import logging
 
-# print(log_path)
+with open(log_path, 'w') as log:
+    logging.basicConfig(
+        filename=log_path,
+        format=logging_format, level=logging.DEBUG,
+        datefmt=time_format)
