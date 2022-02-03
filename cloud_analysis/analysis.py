@@ -19,6 +19,7 @@ properties such as convexity or transparency can be read off.
 
 import cv2 as cv
 import numpy as np
+from matplotlib import pyplot as plt
 
 from cloud_detection.cloud_filter import CloudFilter
 
@@ -54,9 +55,11 @@ class Analysis:
                 A list of cloud objects resembling each a cloud in the image.
     """
 
+    # TODO save default to constants
     def __init__(self, orig: np.ndarray,
-                 num_clouds: int,
-                 border_threshold: float = 0.1):
+                 min_size: int,  # TODO convert to proportion
+                 border_width: int,
+                 contrast_threshold: float):
         """Initialises Analysis.
 
         Args:
@@ -77,9 +80,10 @@ class Analysis:
 
         self.mask = self._get_mask()
         self.contours = self._get_contours()
-        self.clouds = self._get_clouds(self.contours)
+        self.clouds = self._get_clouds(self.contours, min_size, border_width,
+                                       contrast_threshold)
 
-    # TODO update documentation accordingly to the cloud border changes
+    # TODO update documentation
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -133,8 +137,13 @@ class Analysis:
 
         return contours
 
-    def _get_clouds(self, contours) -> list:
-        """Creates a list of clouds sorted by area from large to small."""
+    def _get_clouds(self,
+                    contours: list,
+                    min_size: int,
+                    border_width: int,
+                    contrast_threshold: float) -> list:
+
+        # TODO when no clouds return the largest fitting
 
         clouds = []
         for contour in contours:
@@ -142,25 +151,25 @@ class Analysis:
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             clouds.append(self.Cloud(self.orig, img, mask, contour))
-        return sorted(clouds, key=lambda x: x.contour_area, reverse=True)
+        all_clouds = sorted(clouds, key=lambda x: x.contour_area, reverse=True)
 
-    # TODO combine/write those methods according to the comments below
+        big_clouds = list(
+            filter(lambda cloud: cloud.contour_area >= min_size, all_clouds))
 
-    def _get_valid_clouds(self,
-                          clouds: list,
-                          min_size: int,
-                          border_width: int,
-                          contrast_threshold: float):
+        non_image_border_clouds = list(
+            filter(lambda cloud: np.all(
+                cloud.contour[:, 1] >= border_width) and np.all(
+                cloud.contour[:, 1] <= cloud.height - border_width),
+                   big_clouds))
 
-        # TODO instead of filtering by the border proportion on the circle
-        #  (because it doesn't fit) get the border contrast by the edges method
-        #  and discard the ones with a too high contrast
-        #  sort first the clouds by size then apply edges until the
-        #  threshold is reached
+        # TODO except clause for no valid spans
 
-        def get_contrast():
-            for cloud in clouds:
-                out = cloud.mean_diff_edges()
+        visible_area_clouds = list(filter(
+            lambda cloud: np.max(cloud.diff_edges(
+                border_width, border_width)) <= contrast_threshold,
+            non_image_border_clouds))
+
+        return visible_area_clouds
 
     class Cloud:
         """A single cloud in orig.
@@ -357,7 +366,6 @@ class Analysis:
             spans = [np.matmul(span_range, vec[np.newaxis]) + self.contour[n]
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
-            print(spans.shape)
 
             valid_spans = [span for span in spans if
                            np.all(span[:, 0] > 0)
@@ -366,19 +374,20 @@ class Analysis:
                            and np.all(span[:, 1] < self.width)]
 
             valid_spans = np.array(valid_spans)
-            print(valid_spans.shape)
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
                               for span in valid_spans])
 
+            # TODO raise when empty
+
             return edges
 
-        def mean_diff_edges(self,
-                            in_steps: int,
-                            out_steps: int,
-                            appr_dist: int = 3,
-                            step_len: float = 2) -> np.ndarray:
+        def diff_edges(self,
+                       in_dist: float,
+                       out_dist: float,
+                       appr_dist: int = 3,
+                       step_len: float = 2) -> np.ndarray:
             """A measurement for the roughness of the edge of the cloud.
 
             The function computes an average roughness of the edge of the cloud
@@ -390,8 +399,7 @@ class Analysis:
                 A numpy array with the average change from one pixel to another
                 in the direction of the boundary. It has shape 3.
             """
-            edges = self.edges(in_steps, out_steps, appr_dist,
-                               step_len)
-
-            return np.mean(
-                np.abs(np.diff(np.mean(edges, axis=0), axis=0))) * step_len
+            edges = self.edges(int(np.floor(in_dist / step_len)),
+                               int(np.floor(out_dist / step_len)),
+                               appr_dist, step_len)
+            return np.abs(np.diff(np.mean(edges, axis=0), axis=0)) / step_len
