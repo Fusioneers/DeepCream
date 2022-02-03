@@ -17,10 +17,15 @@ properties such as convexity or transparency can be read off.
     cv.imshow(analysis.clouds[0].img)
 """
 
+import logging
 import cv2 as cv
 import numpy as np
 
 from cloud_detection.cloud_filter import CloudFilter
+from constants import logging_format
+
+# TODO logging
+logging.info('this is a test log in analysis.py')
 
 
 # TODO add more exception clauses and raises
@@ -56,7 +61,7 @@ class Analysis:
 
     # TODO save default to constants
     def __init__(self, orig: np.ndarray,
-                 min_size: int,  # TODO convert to proportion
+                 min_size_proportion: float,
                  border_width: int,
                  contrast_threshold: float):
         """Initialises Analysis.
@@ -79,7 +84,8 @@ class Analysis:
 
         self.mask = self._get_mask()
         self.contours = self._get_contours()
-        self.clouds = self._get_clouds(self.contours, min_size, border_width,
+        self.clouds = self._get_clouds(self.contours, min_size_proportion,
+                                       border_width,
                                        contrast_threshold)
 
     # TODO update documentation
@@ -138,11 +144,13 @@ class Analysis:
 
     def _get_clouds(self,
                     contours: list,
-                    min_size: int,
+                    min_size_proportion: float,
                     border_width: int,
                     contrast_threshold: float) -> list:
 
         # TODO when no clouds return the largest fitting
+
+        min_size = min_size_proportion * self.height * self.width
 
         clouds = []
         for contour in contours:
@@ -163,10 +171,15 @@ class Analysis:
 
         # TODO except clause for no valid spans
 
-        visible_area_clouds = list(filter(
-            lambda cloud: np.max(cloud.diff_edges(
-                border_width, border_width)) <= contrast_threshold,
-            non_image_border_clouds))
+        def check_valid(cloud):
+            try:
+                max = np.max(cloud.diff_edges(border_width, border_width))
+                out = max <= contrast_threshold
+            except ValueError as err:
+                pass
+
+        visible_area_clouds = list(
+            filter(check_valid, non_image_border_clouds))
 
         return visible_area_clouds
 
@@ -374,11 +387,12 @@ class Analysis:
 
             valid_spans = np.array(valid_spans)
 
+            if not valid_spans.size:
+                raise ValueError('The cloud has no valid spans.')
+
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
                               for span in valid_spans])
-
-            # TODO raise when empty
 
             return edges
 

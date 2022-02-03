@@ -1,12 +1,11 @@
 import os
-from datetime import datetime
+import datetime
 
 import cv2 as cv
 import pandas as pd
 from tqdm import tqdm
 
 from analysis import Analysis
-
 
 directory = '../sample_data/set_1'
 num_clouds = 5
@@ -61,4 +60,5 @@ for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
         df.loc[loc, ['mean_diff_edges_g']] = mean_diff_edges[1]
         df.loc[loc, ['mean_diff_edges_b']] = mean_diff_edges[2]
 
-df.to_csv(f'{datetime.today().strftime("%Y %m %d %H %M")} cloud_analysis data')
+df.to_csv(f'{datetime.datetime.today().strftime("%Y %m %d %H %M")} '
+          f'cloud_analysis data')
