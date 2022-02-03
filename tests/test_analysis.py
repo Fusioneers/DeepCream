@@ -19,7 +19,7 @@ def test_is_not_none():
     img = cv.imread(path)
     assert img is not None
 
-    analysis = cloud_analysis.analysis.Analysis(img, 10000, 20, 100)
+    analysis = cloud_analysis.analysis.Analysis(img, 20000, 20, 100)
     assert analysis is not None
     assert analysis.clouds is not None
     assert analysis.orig is not None
