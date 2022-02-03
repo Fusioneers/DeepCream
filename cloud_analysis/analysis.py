@@ -357,10 +357,7 @@ class Analysis:
             spans = [np.matmul(span_range, vec[np.newaxis]) + self.contour[n]
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
-
-            center = np.array([self.height / 2, self.width / 2])
-            norms = [np.linalg.norm(span - center, axis=1)
-                     for span in spans]
+            print(spans.shape)
 
             valid_spans = [span for span in spans if
                            np.all(span[:, 0] > 0)
@@ -369,6 +366,7 @@ class Analysis:
                            and np.all(span[:, 1] < self.width)]
 
             valid_spans = np.array(valid_spans)
+            print(valid_spans.shape)
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
