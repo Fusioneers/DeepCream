@@ -2,14 +2,15 @@ import cv2
 import numpy as np
 from numpy import asarray
 from PIL import Image
-from cloud_detection.unet_model import unet_model
+from code.cloud_detection.unet_model import unet_model
 import os
 
 path = os.path.realpath(__file__).removesuffix('cloud_filter.py')
 
 
 class CloudFilter:
-    def __init__(self, night_threshold=20, cloudless_threshold=0.02, binary_cloud_threshold=100, h_min=0, h_max=179,
+    def __init__(self, night_threshold=20, cloudless_threshold=0.02,
+                 binary_cloud_threshold=100, h_min=0, h_max=179,
                  s_min=0, s_max=50, v_min=145,
                  v_max=255, contrast=1, brightness=0, blur=3, weight_ai=0.7):
 
@@ -42,7 +43,8 @@ class CloudFilter:
         self.model.load_weights(path + 'clouds_test.hdf5')
 
     def load_image(self, img):
-        normal = cv2.resize(img, (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
+        normal = cv2.resize(img, (self.WIDTH, self.HEIGHT),
+                            interpolation=cv2.INTER_AREA)
         scaled = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
         if normal is None or scaled is None:
@@ -59,7 +61,9 @@ class CloudFilter:
 
     def ai_generate_image_mask(self, original):
         # Let the AI predict where the clouds are
-        pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT, self.WIDTH, 1))
+        pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT,
+                                                                 self.WIDTH,
+                                                                 1))
 
         # Convert the prediction to a mask
         mask = cv2.normalize(pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
@@ -74,7 +78,8 @@ class CloudFilter:
             blurred = original
 
         # Adjust contrast and brightness
-        adjusted = cv2.convertScaleAbs(blurred, alpha=self.contrast, beta=self.brightness)
+        adjusted = cv2.convertScaleAbs(blurred, alpha=self.contrast,
+                                       beta=self.brightness)
 
         # Set lower and upper boundaries to filter out
         lower = np.array([self.hMin, self.sMin, self.vMin])
@@ -92,9 +97,11 @@ class CloudFilter:
         for y in range(hsv.shape[0]):
             for x in range(hsv.shape[1]):
                 # TODO RuntimeWarning: overflow encountered in ubyte_scalars ??
-                hue = (hsv[y, x, 0] > 0) * np.clip(255 - (hsv[:, :, 0].max() - hsv[y, x, 2]), 0, 255)
+                hue = (hsv[y, x, 0] > 0) * np.clip(
+                    255 - (hsv[:, :, 0].max() - hsv[y, x, 2]), 0, 255)
 
-                saturation = (hsv[y, x, 1] > 0) * np.clip(255 - (hsv[y, x, 1]), 0, 255)
+                saturation = (hsv[y, x, 1] > 0) * np.clip(255 - (hsv[y, x, 1]),
+                                                          0, 255)
 
                 value = np.clip(255 + hsv[y, x, 2] - self.vMax, 0, 255)
 
@@ -117,11 +124,13 @@ class CloudFilter:
         hsv_mask = self.cv2_generate_image_mask(normal)
 
         # Combine the two masks according
-        mask = cv2.addWeighted(ai_mask, self.weightAi, hsv_mask, (1 - self.weightAi), 0.0)
+        mask = cv2.addWeighted(ai_mask, self.weightAi, hsv_mask,
+                               (1 - self.weightAi), 0.0)
 
         # Normalize the resulting maks and make it binary
         mask = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-        ret, mask = cv2.threshold(mask, self.binaryCloudThreshold, 255, cv2.THRESH_BINARY)
+        ret, mask = cv2.threshold(mask, self.binaryCloudThreshold, 255,
+                                  cv2.THRESH_BINARY)
 
         # Apply the mask to filter out everything but the clouds
         multi_color_output = cv2.bitwise_and(normal, normal, mask=mask)

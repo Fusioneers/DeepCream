@@ -1,25 +1,22 @@
 import os
-
+from code.__init__ import rep_path
 import cv2 as cv
 
-import cloud_analysis.analysis
-
-# path = os.path.normpath(os.path.join(os.getcwd(), os.path.normpath(
-#     'sample_data/Data/zz_astropi_1_photo_364.jpg')))
+import code.cloud_analysis.analysis
 
 # ----- VERY FRAGILE -----
-path = os.path.normpath('../sample_data/Data/zz_astropi_1_photo_364.jpg')
+path = os.path.normpath(
+    os.path.join(rep_path, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
+
+
 # ----- VERY FRAGILE -----
-
-
-print(path)
 
 
 def test_is_not_none():
     img = cv.imread(path)
     assert img is not None
 
-    analysis = cloud_analysis.analysis.Analysis(img, 20000, 20, 100)
+    analysis = code.cloud_analysis.analysis.Analysis(img, 2000, 20, 100)
     assert analysis is not None
     assert analysis.clouds is not None
     assert analysis.orig is not None

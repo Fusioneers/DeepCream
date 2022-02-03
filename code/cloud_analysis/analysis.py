@@ -21,13 +21,12 @@ import logging
 import cv2 as cv
 import numpy as np
 
-from cloud_detection.cloud_filter import CloudFilter
-from constants import logging_format
+from code.cloud_detection.cloud_filter import CloudFilter
+from code.constants import default_step_len, default_appr_dist
+
 
 # TODO logging
-logging.info('this is a test log in analysis.py')
-
-
+# TODO update documentation
 # TODO add more exception clauses and raises
 
 
@@ -59,7 +58,6 @@ class Analysis:
                 A list of cloud objects resembling each a cloud in the image.
     """
 
-    # TODO save default to constants
     def __init__(self, orig: np.ndarray,
                  min_size_proportion: float,
                  border_width: int,
@@ -87,8 +85,6 @@ class Analysis:
         self.clouds = self._get_clouds(self.contours, min_size_proportion,
                                        border_width,
                                        contrast_threshold)
-
-    # TODO update documentation
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -148,8 +144,6 @@ class Analysis:
                     border_width: int,
                     contrast_threshold: float) -> list:
 
-        # TODO when no clouds return the largest fitting
-
         min_size = min_size_proportion * self.height * self.width
 
         clouds = []
@@ -169,14 +163,14 @@ class Analysis:
                 cloud.contour[:, 1] <= cloud.height - border_width),
                    big_clouds))
 
-        # TODO except clause for no valid spans
-
         def check_valid(cloud):
             try:
                 max = np.max(cloud.diff_edges(border_width, border_width))
                 out = max <= contrast_threshold
             except ValueError as err:
-                pass
+                logging.warning(f'ValueError occurred at check_valid: {err}')
+                out = False
+            return out
 
         visible_area_clouds = list(
             filter(check_valid, non_image_border_clouds))
@@ -319,8 +313,8 @@ class Analysis:
         def edges(self,
                   in_steps: int,
                   out_steps: int,
-                  appr_dist: int = 3,
-                  step_len: float = 2) -> np.ndarray:
+                  appr_dist: int = default_appr_dist,
+                  step_len: float = default_step_len) -> np.ndarray:
             """Gets samples of the surroundings of the contour of the cloud.
 
             First, perpendicular vectors to the contour are created. Those are
@@ -399,8 +393,8 @@ class Analysis:
         def diff_edges(self,
                        in_dist: float,
                        out_dist: float,
-                       appr_dist: int = 3,
-                       step_len: float = 2) -> np.ndarray:
+                       appr_dist: int = default_appr_dist,
+                       step_len: float = default_step_len) -> np.ndarray:
             """A measurement for the roughness of the edge of the cloud.
 
             The function computes an average roughness of the edge of the cloud

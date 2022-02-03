@@ -1,10 +1,10 @@
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-from cloud_analysis.analysis import Analysis
+from code.cloud_analysis.analysis import Analysis
 
 analysis = Analysis(
-    cv.imread('../sample_data/Data/zz_astropi_1_photo_364.jpg'), 5)
+    cv.imread('../../sample_data/Data/zz_astropi_1_photo_364.jpg'), 5)
 
 # Load the image
 img = cv.imread("shapes/ellipse.png")
