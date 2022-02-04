@@ -1,10 +1,12 @@
 import os
-from tests.__init__ import rep_path
-import sys
+# from tests.__init__ import rep_path
+# import sys
 
 # sys.path.append(os.path.join(rep_path, 'DeepCream'))
 # print(rep_path)
 import cv2 as cv
+
+from DeepCream.constants import rep_path
 
 from DeepCream.cloud_analysis.analysis import Analysis
 
@@ -14,7 +16,9 @@ path = os.path.normpath(
 
 
 # TODO multiple functions
+# TODO class
 def test_is_not_none():
+    print('this is executed in test_analysis.py')
     img = cv.imread(path)
     assert img is not None
 

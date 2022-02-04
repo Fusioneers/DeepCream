@@ -18,6 +18,8 @@ properties such as convexity or transparency can be read off.
 """
 
 import logging
+
+logging.info('Started DeepCream/cloud_analysis/analysis.py')
 import cv2 as cv
 import numpy as np
 
@@ -81,10 +83,14 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = self._get_mask()
+        logging.info('Created mask')
+
         self.contours = self._get_contours()
+        logging.info('Created contours')
+
         self.clouds = self._get_clouds(self.contours, min_size_proportion,
-                                       border_width,
-                                       contrast_threshold)
+                                       border_width, contrast_threshold)
+        logging.info('Created clouds')
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -99,11 +105,19 @@ class Analysis:
             ValueError: Orig has no clouds.
         """
         cloud_filter = CloudFilter()
-        mask, _ = cloud_filter.evaluate_image(self.orig)
-        if not np.any(mask):
-            raise ValueError('Orig has no clouds.')
+        logging.debug('Initialised CloudFilter')
 
-        return cv.resize(mask, (self.width, self.height))
+        mask, _ = cloud_filter.evaluate_image(self.orig)
+        logging.debug('Evaluated orig with CloudFilter')
+
+        if not np.any(mask):
+            logging.warning('Orig has no clouds')
+            raise ValueError('Orig has no clouds')
+
+        out = cv.resize(mask, (self.width, self.height))
+        logging.debug('Resized mask')
+
+        return out
 
     def _get_contours(self) -> tuple[np.ndarray]:
         """Gets the contours of the clouds.
@@ -134,7 +148,10 @@ class Analysis:
 
         contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
                                       cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+        logging.debug('Found contours with cv.findContours')
+
         contours = [np.squeeze(contour) for contour in contours]
+        logging.debug('Reformatted contours')
 
         return contours
 
@@ -152,16 +169,18 @@ class Analysis:
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             clouds.append(self.Cloud(self.orig, img, mask, contour))
-        all_clouds = sorted(clouds, key=lambda x: x.contour_area, reverse=True)
+        logging.debug('Created list of all clouds')
 
         big_clouds = list(
-            filter(lambda cloud: cloud.contour_area >= min_size, all_clouds))
+            filter(lambda cloud: cloud.contour_area >= min_size, clouds))
+        logging.debug('Filtered clouds by size')
 
         non_image_border_clouds = list(
             filter(lambda cloud: np.all(
                 cloud.contour[:, 1] >= border_width) and np.all(
                 cloud.contour[:, 1] <= cloud.height - border_width),
                    big_clouds))
+        logging.debug('Filtered clouds by image border')
 
         def check_valid(cloud):
             try:
@@ -175,6 +194,7 @@ class Analysis:
 
         visible_area_clouds = list(
             filter(check_valid, non_image_border_clouds))
+        logging.debug('Filtered clouds by visible area border')
 
         return visible_area_clouds
 
@@ -243,13 +263,15 @@ class Analysis:
             self.height, self.width, self.channels = self.orig.shape
             self.img = img
             self.mask = mask
-
             self.contour = contour
+
             self.contour_perimeter = cv.arcLength(self.contour, True)
             self.contour_area = cv.contourArea(self.contour)
             self.hull = cv.convexHull(self.contour)
             self.hull_perimeter = cv.arcLength(self.hull, True)
             self.hull_area = cv.contourArea(self.hull)
+
+            logging.debug('Initialised cloud')
 
         def roundness(self) -> float:
             """Gets the roundness of the cloud."""
@@ -366,28 +388,34 @@ class Analysis:
             appr_vec_norm = np.linalg.norm(appr_vec, axis=1)
             appr_vec = appr_vec * step_len / np.tile(appr_vec_norm, (2, 1)).T
 
+            logging.debug('Created appr_vec')
+
             perp_vec = np.roll(appr_vec, 1, axis=1)
             perp_vec[:, 0] *= -1
+            logging.debug('Created perp_vec')
 
             span_range = np.arange(-in_steps, out_steps + 1)[:, np.newaxis]
             spans = [np.matmul(span_range, vec[np.newaxis]) + self.contour[n]
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
+            logging.debug('Created spans')
 
             valid_spans = [span for span in spans if
                            np.all(span[:, 0] > 0)
                            and np.all(span[:, 0] < self.height)
                            and np.all(span[:, 1] > 0)
                            and np.all(span[:, 1] < self.width)]
-
             valid_spans = np.array(valid_spans)
+            logging.debug('Created valid_spans')
 
             if not valid_spans.size:
-                raise ValueError('The cloud has no valid spans.')
+                logging.warning('The cloud has no valid spans')
+                raise ValueError('The cloud has no valid spans')
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
                               for span in valid_spans])
+            logging.debug('Created edges')
 
             return edges
 
