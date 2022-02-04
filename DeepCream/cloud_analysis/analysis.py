@@ -27,7 +27,6 @@ from DeepCream.cloud_detection.cloud_filter import CloudFilter
 from DeepCream.constants import default_step_len, default_appr_dist
 
 
-# TODO logging
 # TODO update documentation
 # TODO add more exception clauses and raises
 
@@ -84,13 +83,17 @@ class Analysis:
 
         self.mask = self._get_mask()
         logging.info('Created mask')
+        if not np.any(self.mask):
+            logging.warning('Orig has no clouds')
+            self.contours = ()
+            self.clouds = []
+        else:
+            self.contours = self._get_contours()
+            logging.info('Created contours')
 
-        self.contours = self._get_contours()
-        logging.info('Created contours')
-
-        self.clouds = self._get_clouds(self.contours, min_size_proportion,
-                                       border_width, contrast_threshold)
-        logging.info('Created clouds')
+            self.clouds = self._get_clouds(self.contours, min_size_proportion,
+                                           border_width, contrast_threshold)
+            logging.info('Created clouds')
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -110,16 +113,12 @@ class Analysis:
         mask, _ = cloud_filter.evaluate_image(self.orig)
         logging.debug('Evaluated orig with CloudFilter')
 
-        if not np.any(mask):
-            logging.warning('Orig has no clouds')
-            raise ValueError('Orig has no clouds')
-
         out = cv.resize(mask, (self.width, self.height))
         logging.debug('Resized mask')
 
         return out
 
-    def _get_contours(self) -> tuple[np.ndarray]:
+    def _get_contours(self) -> list[np.ndarray]:
         """Gets the contours of the clouds.
 
         This function computes the contours of orig. those get filtered by the
@@ -171,6 +170,7 @@ class Analysis:
             clouds.append(self.Cloud(self.orig, img, mask, contour))
         logging.debug('Created list of all clouds')
 
+        # TODO instead of a threshold get the n smallest, the n largest etc.
         big_clouds = list(
             filter(lambda cloud: cloud.contour_area >= min_size, clouds))
         logging.debug('Filtered clouds by size')
@@ -183,13 +183,11 @@ class Analysis:
         logging.debug('Filtered clouds by image border')
 
         def check_valid(cloud):
-            try:
-                max_contrast = np.max(
-                    cloud.diff_edges(border_width, border_width))
-                out = max_contrast <= contrast_threshold
-            except ValueError as err:
-                logging.warning(f'ValueError occurred at check_valid: {err}')
+            diff_edges = cloud.diff_edges(border_width, border_width)
+            if not diff_edges.size:
                 out = False
+            else:
+                out = np.max(cloud.diff_edges(border_width, border_width))
             return out
 
         visible_area_clouds = list(
@@ -305,7 +303,7 @@ class Analysis:
             """Gets the mean of each channel inside the cloud"""
             return cv.mean(self.img, mask=self.mask)
 
-        def std(self) -> list:
+        def std(self) -> tuple:
             """Gets the standard deviation of each channel inside the cloud."""
             _, std = cv.meanStdDev(self.img, mask=self.mask)
             std = (std[0][0], std[1][0], std[2][0])
@@ -410,7 +408,6 @@ class Analysis:
 
             if not valid_spans.size:
                 logging.warning('The cloud has no valid spans')
-                raise ValueError('The cloud has no valid spans')
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
@@ -438,4 +435,7 @@ class Analysis:
             edges = self.edges(int(np.floor(in_dist / step_len)),
                                int(np.floor(out_dist / step_len)),
                                appr_dist, step_len)
+            if not edges.size:
+                return np.array([])
+
             return np.abs(np.diff(np.mean(edges, axis=0), axis=0)) / step_len

@@ -1,56 +1,66 @@
+import pytest
 import os
-# from tests.__init__ import rep_path
-# import sys
-
-# sys.path.append(os.path.join(rep_path, 'DeepCream'))
-# print(rep_path)
 import cv2 as cv
+import numpy as np
 
 from DeepCream.constants import rep_path
 
 from DeepCream.cloud_analysis.analysis import Analysis
 
-# ----- VERY FRAGILE -----
 path = os.path.normpath(
     os.path.join(rep_path, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
 
+analysis = 0
 
-# TODO multiple functions
-# TODO class
-def test_is_not_none():
-    print('this is executed in test_analysis.py')
+
+def test_create_analysis():
+    global analysis
+
     img = cv.imread(path)
     assert img is not None
 
-    analysis = Analysis(img, 2000, 20, 100)
-    assert analysis is not None
-    assert analysis.clouds is not None
-    assert analysis.orig is not None
-    assert analysis.mask is not None
-    assert all([cloud is not None for cloud in analysis.clouds])
-
-    assert all([cloud.contour is not None for cloud in analysis.clouds])
-    assert all(
-        [cloud.contour_perimeter is not None for cloud in analysis.clouds])
-    assert all([cloud.contour_area is not None for cloud in analysis.clouds])
-    assert all([cloud.hull is not None for cloud in analysis.clouds])
-    assert all([cloud.hull_perimeter is not None for cloud in analysis.clouds])
-    assert all([cloud.hull_area is not None for cloud in analysis.clouds])
-
-    assert all([cloud.roundness() is not None for cloud in analysis.clouds])
-    assert all([cloud.convexity() is not None for cloud in analysis.clouds])
-    assert all([cloud.compactness() is not None for cloud in analysis.clouds])
-    assert all([cloud.solidity() is not None for cloud in analysis.clouds])
-    assert all(
-        [cloud.rectangularity() is not None for cloud in analysis.clouds])
-    assert all([cloud.elongation() is not None for cloud in analysis.clouds])
-    assert all([cloud.mean() for cloud in analysis.clouds])
-    assert all([cloud.std() for cloud in analysis.clouds])
-    assert all([cloud.transparency() is not None for cloud in analysis.clouds])
-    assert all([cloud.edges(50, 50).size for cloud in analysis.clouds])
-    assert all([cloud.diff_edges(20, 20) is not None for cloud in
-                analysis.clouds])
+    analysis_ = Analysis(img, 0, 5, 0)
+    assert analysis_ is not None
+    assert analysis_.clouds
+    analysis = analysis_
 
 
-if __name__ == '__main__':
-    test_is_not_none()
+@pytest.mark.parametrize('obj', [
+    'orig',
+    'mask',
+])
+def test_is_not_none(obj):
+    assert getattr(analysis, obj).size
+
+
+@pytest.mark.parametrize('obj', [
+    'contour',
+    'hull',
+])
+def test_is_not_empty(obj):
+    assert np.array(getattr(analysis.clouds[0], obj)).size
+
+
+@pytest.mark.parametrize('obj', [
+    'contour_perimeter',
+    'contour_area',
+    'hull_perimeter',
+    'hull_area',
+])
+def test_not_none_cloud_attributes(obj):
+    assert getattr(analysis.clouds[0], obj)
+
+
+@pytest.mark.parametrize('obj', [
+    'roundness',
+    'convexity',
+    'compactness',
+    'solidity',
+    'rectangularity',
+    'elongation',
+    'transparency',
+    'mean',
+    'std',
+])
+def test_not_none_methods(obj):
+    assert getattr(analysis.clouds[0], obj)()

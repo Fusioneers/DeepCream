@@ -7,8 +7,8 @@ rep_path = os.path.normpath(
 
 time_format = '%Y-%m-%d %H-%M-%S'
 
-logging_format = '%(asctime)s: %(filename)s: %(lineno)d: %(levelname)s: ' \
-                 '%(message)s'
+logging_format = '%(asctime)s: %(filename)s: line %(lineno)d: ' \
+                 '%(levelname)s: %(message)s'
 
 logging_level = logging.DEBUG
 
