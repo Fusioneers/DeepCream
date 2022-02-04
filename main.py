@@ -1,5 +1,5 @@
-from code.__init__ import log_path
-from code.constants import time_format, logging_format
+from DeepCream.__init__ import log_path
+from DeepCream.constants import time_format, logging_format
 import logging
 
 with open(log_path, 'w') as log:

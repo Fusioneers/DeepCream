@@ -21,8 +21,8 @@ import logging
 import cv2 as cv
 import numpy as np
 
-from code.cloud_detection.cloud_filter import CloudFilter
-from code.constants import default_step_len, default_appr_dist
+from DeepCream.cloud_detection.cloud_filter import CloudFilter
+from DeepCream.constants import default_step_len, default_appr_dist
 
 
 # TODO logging
@@ -165,8 +165,9 @@ class Analysis:
 
         def check_valid(cloud):
             try:
-                max = np.max(cloud.diff_edges(border_width, border_width))
-                out = max <= contrast_threshold
+                max_contrast = np.max(
+                    cloud.diff_edges(border_width, border_width))
+                out = max_contrast <= contrast_threshold
             except ValueError as err:
                 logging.warning(f'ValueError occurred at check_valid: {err}')
                 out = False

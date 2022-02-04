@@ -1,7 +1,7 @@
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-from code.cloud_analysis.analysis import Analysis
+from DeepCream.cloud_analysis.analysis import Analysis
 
 analysis = Analysis(
     cv.imread('../../sample_data/Data/zz_astropi_1_photo_364.jpg'), 5)

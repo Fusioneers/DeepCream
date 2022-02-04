@@ -32,6 +32,7 @@ columns = ['image',
 df = pd.DataFrame(columns=columns)
 
 for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
+    # TODO fit
     analysis = Analysis(cv.imread(img.path), num_clouds)
 
     for j, cloud in enumerate(analysis.clouds):

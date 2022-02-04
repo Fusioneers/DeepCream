@@ -1,9 +1,7 @@
 import logging
 from datetime import datetime
 import os
-from code.constants import time_format, logging_format
-
-rep_path = os.path.normpath(os.path.dirname(__file__).removesuffix('code'))
+from DeepCream.constants import time_format, logging_format, rep_path
 
 log_path = os.path.normpath(os.path.join(
     rep_path, f'logs/{datetime.today().strftime(time_format)}.log'))

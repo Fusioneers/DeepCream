@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from numpy import asarray
 from PIL import Image
-from code.cloud_detection.unet_model import unet_model
+from DeepCream.cloud_detection.unet_model import unet_model
 import os
 
 path = os.path.realpath(__file__).removesuffix('cloud_filter.py')

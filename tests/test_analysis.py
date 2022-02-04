@@ -1,22 +1,24 @@
 import os
-from code.__init__ import rep_path
+from tests.__init__ import rep_path
+import sys
+
+# sys.path.append(os.path.join(rep_path, 'DeepCream'))
+# print(rep_path)
 import cv2 as cv
 
-import code.cloud_analysis.analysis
+from DeepCream.cloud_analysis.analysis import Analysis
 
 # ----- VERY FRAGILE -----
 path = os.path.normpath(
     os.path.join(rep_path, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
 
 
-# ----- VERY FRAGILE -----
-
-
+# TODO multiple functions
 def test_is_not_none():
     img = cv.imread(path)
     assert img is not None
 
-    analysis = code.cloud_analysis.analysis.Analysis(img, 2000, 20, 100)
+    analysis = Analysis(img, 2000, 20, 100)
     assert analysis is not None
     assert analysis.clouds is not None
     assert analysis.orig is not None
