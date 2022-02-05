@@ -1,3 +1,5 @@
+# ----------------- THE DOCUMENTATION IS NOT UP TO DATE! --------------------
+
 """Module containing a class to analyse pictures taken with the AstroPi.
 
 This module contains a single class named Analysis, which is initialised with a
@@ -28,7 +30,6 @@ from DeepCream.constants import default_step_len, default_appr_dist
 
 
 # TODO update documentation
-# TODO add more exception clauses and raises
 
 
 class Analysis:
