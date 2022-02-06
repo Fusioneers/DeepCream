@@ -21,7 +21,6 @@ properties such as convexity or transparency can be read off.
 
 import logging
 
-import time
 import cv2 as cv
 import numpy as np
 
@@ -35,7 +34,6 @@ logging.info('Started DeepCream/cloud_analysis/analysis.py')
 
 
 # TODO update documentation
-# TODO improve documentation with DeepL?
 
 
 class Analysis:
