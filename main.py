@@ -1,13 +1,16 @@
-import cv2
-from cloud_detection.cloud_filter import CloudFilter
+from DeepCream.constants import TIME_FORMAT, LOGGING_FORMAT, LOG_PATH, ABS_PATH
+import os
+import logging
+import cv2 as cv
+from DeepCream.cloud_analysis.analysis import Analysis
 
-cf = CloudFilter(weight_ai=0.5, image_directory='sample_data/Data/', tpu_support=True)
+with open(LOG_PATH, 'w') as log:
+    logging.basicConfig(
+        filename=LOG_PATH,
+        format=LOGGING_FORMAT, level=logging.DEBUG)
 
-clouds, mask = cf.evaluate_image('zz_astropi_1_photo_215.jpg')
-
-while True:
-    cv2.imshow('Clouds', clouds)
-    cv2.imshow('Mask', mask)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+# path = os.path.normpath(
+#     os.path.join(REP_PATH, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
+#
+# img = cv.imread(path)
+# analysis = Analysis(img, 2000, 20, 100)

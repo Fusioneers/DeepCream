@@ -1,0 +1,9 @@
+opencv-python
+numpy
+Pillow
+datetime
+pandas
+tqdm
+keras
+tensorflow-cpu
+pycoral
