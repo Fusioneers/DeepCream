@@ -2,9 +2,10 @@ import cv2
 import numpy as np
 from numpy import asarray
 from PIL import Image
-from unet_model import unet_model
 from pycoral.utils import edgetpu
-from DeepCream.constants import ABS_PATH
+
+from DeepCream import ABS_PATH
+from DeepCream.cloud_detection.unet_model import unet_model
 
 
 class CloudFilter:
@@ -62,10 +63,11 @@ class CloudFilter:
         if not tpu_support:
             self.interpreter = None
             self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
-            self.model.load_weights('models/keras')
+            self.model.load_weights(ABS_PATH + '/DeepCream/cloud_detection/models/keras')
         else:
             self.model = None
-            self.interpreter = edgetpu.make_interpreter("models/tflite/model.tflite")
+            self.interpreter = edgetpu.make_interpreter(ABS_PATH + "/DeepCream/cloud_detection/models/tflite/model"
+                                                                   ".tflite")
             self.interpreter.allocate_tensors()
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
@@ -198,8 +200,3 @@ class CloudFilter:
         # multi_color_output = cv2.bitwise_and(normal, normal, mask=mask)
 
         return mask
-
-if __name__ == "__main__":
-    cf = CloudFilter(ABS_PATH + "/data/input/")
-    mask = cf.evaluate_image("photo_00150_51846468570_o.jpg")
-    cv2.imwrite(ABS_PATH + "/data/output/test.TIF", mask)
