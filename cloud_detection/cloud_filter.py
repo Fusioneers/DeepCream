@@ -3,19 +3,18 @@ import numpy as np
 from numpy import asarray
 from PIL import Image
 from cloud_detection.unet_model import unet_model
-import os
-
-path = os.path.realpath(__file__).removesuffix('cloud_filter.py')
+from pycoral.utils import edgetpu
 
 
 class CloudFilter:
-    def __init__(self, night_threshold=20, cloudless_threshold=0.02, binary_cloud_threshold=100, h_min=0, h_max=179,
-                 s_min=0, s_max=50, v_min=145,
-                 v_max=255, contrast=1, brightness=0, blur=3, weight_ai=0.7):
+    def __init__(self, image_directory, night_threshold=20, binary_cloud_threshold=100,
+                 h_min=0, h_max=179, s_min=0, s_max=50, v_min=145, v_max=255, contrast=1, brightness=0, blur=3,
+                 weight_ai=0.7, tpu_support=False):
+
+        self.image_directory = image_directory
 
         # Thresholds for stopping the image processing
         self.nightThreshold = night_threshold
-        self.cloudlessThreshold = cloudless_threshold
         self.binaryCloudThreshold = binary_cloud_threshold
 
         # Set the contrast, brightness and blur which should be applied to the image
@@ -31,38 +30,54 @@ class CloudFilter:
         self.vMin = v_min
         self.vMax = v_max
 
-        # The weight of the ai prediction
+        # The weight of the AI prediction
         self.weightAi = weight_ai
 
         # Load the machine learning model
-        self.HEIGHT = 96 * 2
-        self.WIDTH = 128 * 2
+        self.HEIGHT = 192
+        self.WIDTH = 256
         self.CHANNELS = 3
-        self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
-        self.model.load_weights(path + 'clouds_test.hdf5')
 
-    def load_image(self, img):
-        normal = cv2.resize(img, (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
-        scaled = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-
-        if normal is None or scaled is None:
-            return None, None, None
+        if not tpu_support:
+            self.interpreter = None
+            self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
+            self.model.load_weights('cloud_detection/models/keras')
         else:
-            scaled.thumbnail((self.WIDTH, self.HEIGHT))
-            scaled = asarray(scaled)
-            scaled = scaled.astype('float32')
-            scaled /= 255.0
+            self.model = None
+            self.interpreter = edgetpu.make_interpreter("cloud_detection/models/tflite/script.tflite")
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
 
-            gray = cv2.cvtColor(normal, cv2.COLOR_BGR2GRAY)
+    def load_image(self, image_path):
+        scaled = Image.open(image_path)
+
+        scaled.thumbnail((self.WIDTH, self.HEIGHT))
+
+        scaled = asarray(scaled)
+        scaled = scaled.astype('float32')
+        scaled /= 255.0
+        scaled = cv2.cvtColor(scaled, cv2.COLOR_BGR2RGB)
+
+        normal = cv2.resize(cv2.imread(image_path), (self.WIDTH, self.HEIGHT), interpolation=cv2.INTER_AREA)
+        gray = cv2.cvtColor(normal, cv2.COLOR_BGR2GRAY)
 
         return normal, scaled, gray
 
     def ai_generate_image_mask(self, original):
-        # Let the ai predict where the clouds are
-        pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT, self.WIDTH, 1))
+        assert self.model is not None or self.interpreter is not None
 
-        # Convert the prediction to a mask
-        mask = cv2.normalize(pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        if self.model is not None:
+            # Let the AI predict where the clouds are
+            pred = (self.model.predict(np.array([original])).reshape(self.HEIGHT, self.WIDTH, 1))
+
+            # Convert the prediction to a mask
+            mask = cv2.normalize(pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        elif self.interpreter is not None:
+            self.interpreter.set_tensor(self.input_details[0]['index'], [original])
+            self.interpreter.invoke()
+            pred = self.interpreter.get_tensor(self.output_details[0]['index'])
+            mask = cv2.normalize(pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
 
         return mask
 
@@ -102,21 +117,24 @@ class CloudFilter:
 
         return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
 
-    def evaluate_image(self, img, dark="Too dark"):
-        normal, scaled, gray = self.load_image(img)
+    def evaluate_image(self, file_name):
+        # Check if the file has the correct format
+        assert file_name.endswith('jpg')
 
-        if normal is None or scaled is None or gray is None:
-            return None, None
+        # Load the image
+        normal, scaled, gray = self.load_image(self.image_directory + file_name)
 
-        # Check if the image is overall to dark
-        if gray.mean() < self.nightThreshold:
-            return dark
+        # Check if the images actually loaded
+        assert normal is not None and scaled is not None and gray is not None
+
+        # Check if the image is overall too dark
+        assert gray.mean() > self.nightThreshold
 
         # Compute the two masks
-        ai_mask = self.ai_generate_image_mask(scaled)
+        ai_mask = self.ai_generate_image_mask(scaled).reshape(self.HEIGHT, self.WIDTH)
         hsv_mask = self.cv2_generate_image_mask(normal)
 
-        # Combine the two masks according
+        # Combine the two masks
         mask = cv2.addWeighted(ai_mask, self.weightAi, hsv_mask, (1 - self.weightAi), 0.0)
 
         # Normalize the resulting maks and make it binary
