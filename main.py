@@ -1,7 +1,8 @@
-from DeepCream import deepcream
+from DeepCream.deepcream import DeepCream
 
 try:
-    response_status = deepcream.start()
+    dc = DeepCream("data/input", "data/output")
+    response_status = dc.start()
     print(response_status)
 except BaseException as err:
     print(err)

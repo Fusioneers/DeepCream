@@ -4,7 +4,7 @@ from numpy import asarray
 from PIL import Image
 from pycoral.utils import edgetpu
 
-from DeepCream import ABS_PATH
+from DeepCream.constants import ABS_PATH
 from DeepCream.cloud_detection.unet_model import unet_model
 
 
@@ -34,7 +34,7 @@ class CloudFilter:
         """
 
         # Set the image directory
-        self.image_directory = image_directory
+        self.image_directory = image_directory + "/"
 
         # Set thresholds for cloud detection
         self.binaryCloudThreshold = binary_cloud_threshold
@@ -63,7 +63,7 @@ class CloudFilter:
         if not tpu_support:
             self.interpreter = None
             self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
-            self.model.load_weights(ABS_PATH + '/DeepCream/cloud_detection/models/keras')
+            self.model.load_weights(ABS_PATH + '/DeepCream/cloud_detection/models/keras').expect_partial()
         else:
             self.model = None
             self.interpreter = edgetpu.make_interpreter(ABS_PATH + "/DeepCream/cloud_detection/models/tflite/model"
