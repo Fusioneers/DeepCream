@@ -11,25 +11,31 @@ properties such as convexity or transparency can be read off.
     import cv2 as cv
 
     image = cv.imread(path)
-    number_of_clouds = 5
-    analysis = Analysis(image, number_of_clouds)
+    max_number_of_clouds = 10
+    analysis = Analysis(image, max_number_of_clouds)
 
-    print(f'Convexity: {analysis.clouds[0].convexity}')
-    print(f'Transparency: {analysis.clouds[0].transparency}')
+    print(f'Convexity: {analysis.clouds[0].convexity()}')
+    print(f'Transparency: {analysis.clouds[0].transparency()}')
     cv.imshow(analysis.clouds[0].img)
 """
 
 import logging
 
-logging.info('Started DeepCream/cloud_analysis/analysis.py')
+import time
 import cv2 as cv
 import numpy as np
 
 from DeepCream.cloud_detection.cloud_filter import CloudFilter
-from DeepCream.constants import DEFAULT_STEP_LEN, DEFAULT_APPR_DIST
+from DeepCream.constants import (DEFAULT_STEP_LEN,
+                                 DEFAULT_APPR_DIST,
+                                 DEFAULT_BORDER_WIDTH,
+                                 DEFAULT_VAL_THRESHOLD)
+
+logging.info('Started DeepCream/cloud_analysis/analysis.py')
 
 
 # TODO update documentation
+# TODO improve documentation with DeepL?
 
 
 class Analysis:
@@ -53,17 +59,20 @@ class Analysis:
                 shape as orig, but only a single channel.
             contours:
                 A tuple containing numpy arrays which represent the contours
-                of detected clouds. Only clouds whose contour does not overlap
-                too much with the edge of the visible area are valid. The
-                largest clouds are returned.
+                of the detected clouds. Only clouds whose contour does not
+                overlap too much with the edge of the visible area are valid.
+                Then the largest clouds are selected. If there are less valid
+                clouds in the image than the specified value all valid clouds
+                are returned.
+
             clouds:
                 A list of cloud objects resembling each a cloud in the image.
     """
 
     def __init__(self, orig: np.ndarray,
                  max_num_clouds: int,
-                 border_width: int,
-                 contrast_threshold: float):
+                 border_width: int = DEFAULT_BORDER_WIDTH,
+                 val_threshold: float = DEFAULT_VAL_THRESHOLD):
         """Initialises Analysis.
 
         Args:
@@ -71,13 +80,16 @@ class Analysis:
                 The original RGB image which is passed during initialisation.
                 It should have the shape (height, width, channels).
             max_num_clouds:
-                The number of clouds which are created.
-            border_threshold:
-                The allowed proportion of the number of pixels which
-                lie on the edge of the visible area in the convex hull of a
-                cloud. A low value means that clouds have to be fully inside
-                the visible area to be recognised.
-        """
+                The maximum number of clouds to be created. If there
+                are fewer clouds than the specified value in the image all
+                valid clouds are returned.
+            border_width:
+                The distance in pixels from the edge of the visible area to the
+                contour a cloud is allowed to be.
+            val_threshold:
+                The value (as in HSV) that is considered to lie outside the
+                visible area.
+                """
 
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
@@ -93,7 +105,7 @@ class Analysis:
             logging.info('Created contours')
 
             self.clouds = self._get_clouds(self.contours, max_num_clouds,
-                                           border_width, contrast_threshold)
+                                           border_width, val_threshold)
             logging.info(f'Created {len(self.clouds)} clouds')
 
     def _get_mask(self) -> np.ndarray:
@@ -104,9 +116,6 @@ class Analysis:
             height and width as orig, with a 255 for a pixel which is
             estimated to be a cloud and a 0 otherwise. It has the same shape
             as orig, but only a single channel i.e. shape (height, width).
-
-        Raises:
-            ValueError: Orig has no clouds.
         """
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
@@ -122,28 +131,9 @@ class Analysis:
     def _get_contours(self) -> list[np.ndarray]:
         """Gets the contours of the clouds.
 
-        This function computes the contours of orig. those get filtered by the
-        proportion of pixels they share with the edge of the visible area to
-        ensure that only whole clouds get analysed. The max_num_clouds largest
-        clouds (sorted by area) are then returned.
-
-        Args:
-            max_num_clouds:
-                The number of clouds which are created.
-            border_threshold:
-                The allowed proportion of the number of pixels which
-                lie on the edge of the visible area in the convex hull of a
-                cloud. A low value means that clouds have to be fully inside
-                the visible area to be recognised.
-
         Returns:
             A tuple containing numpy arrays which represent the coordinates of
             the contours.
-
-        Raises:
-            ValueError: Orig has not enough clouds to return.
-            ValueError: Orig has not enough clouds which are inside the visible
-                area to return.
         """
 
         contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
@@ -155,12 +145,12 @@ class Analysis:
 
         return contours
 
+    # TODO test performance. If it is too slow convert to generator.
     def _get_clouds(self,
                     contours: list,
                     max_num_clouds: int,
                     border_width: int,
-                    contrast_threshold: float) -> list:
-
+                    val_threshold: float) -> list:
         clouds = []
         for contour in contours:
             mask = np.zeros((self.height, self.width), np.uint8)
@@ -170,15 +160,15 @@ class Analysis:
         logging.debug('Created list of all clouds')
 
         def check_valid(cloud):
-            diff_edges = cloud.diff_edges(border_width, border_width)
-            if not diff_edges.size:
+            edges = cloud.edges(border_width, border_width)
+            if not edges.size:
                 out = False
             else:
-                max_val = np.max(cloud.diff_edges(border_width, border_width))
-                out = max_val <= contrast_threshold
+                min_val = np.min(np.max(edges, axis=2))
+                out = min_val >= val_threshold
             return out
 
-        if not contrast_threshold:
+        if not val_threshold:
             valid_clouds = clouds
         else:
             non_image_border_clouds = list(
@@ -192,15 +182,18 @@ class Analysis:
                 filter(check_valid, non_image_border_clouds))
             logging.debug('Filtered clouds by visible area border')
 
+        valid_clouds = sorted(valid_clouds,
+                              key=lambda cloud: getattr(cloud, 'contour_area'),
+                              reverse=True)
+
         if len(valid_clouds) <= max_num_clouds:
             out = valid_clouds
             logging.debug(
                 'There are less or equal valid clouds than max_num_clouds')
         else:
-            indices = np.linspace(0, len(valid_clouds) - 1,
-                                  num=max_num_clouds).astype('int')
-            out = [valid_clouds[idx] for idx in indices]
+            out = valid_clouds[:max_num_clouds]
             logging.debug('Filtered clouds by size')
+
         return out
 
     class Cloud:
@@ -392,17 +385,13 @@ class Analysis:
             appr_vec_norm = np.linalg.norm(appr_vec, axis=1)
             appr_vec = appr_vec * step_len / np.tile(appr_vec_norm, (2, 1)).T
 
-            logging.debug('Created appr_vec')
-
             perp_vec = np.roll(appr_vec, 1, axis=1)
             perp_vec[:, 0] *= -1
-            logging.debug('Created perp_vec')
 
             span_range = np.arange(-in_steps, out_steps + 1)[:, np.newaxis]
             spans = [np.matmul(span_range, vec[np.newaxis]) + self.contour[n]
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
-            logging.debug('Created spans')
 
             valid_spans = [span for span in spans if
                            np.all(span[:, 0] > 0)
@@ -410,7 +399,6 @@ class Analysis:
                            and np.all(span[:, 1] > 0)
                            and np.all(span[:, 1] < self.width)]
             valid_spans = np.array(valid_spans)
-            logging.debug('Created valid_spans')
 
             if not valid_spans.size:
                 logging.info('The cloud has no valid spans')
@@ -418,7 +406,6 @@ class Analysis:
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
                               for span in valid_spans])
-            logging.debug('Created edges')
 
             return edges
 

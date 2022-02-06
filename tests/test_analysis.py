@@ -13,13 +13,16 @@ path = os.path.normpath(
 analysis = 0
 
 
+# TODO test whether the values are meaningful
+# TODO test the performance
+
 def test_create_analysis():
     global analysis
 
     img = cv.imread(path)
     assert img is not None
 
-    analysis_ = Analysis(img, 5, 5, 0)
+    analysis_ = Analysis(img, 5, 5, 20)
     assert analysis_ is not None
     assert analysis_.clouds
     analysis = analysis_

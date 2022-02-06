@@ -15,3 +15,5 @@ LOG_PATH = os.path.normpath(os.path.join(ABS_PATH, f'logs/{datetime.today().strf
 
 DEFAULT_APPR_DIST = 3
 DEFAULT_STEP_LEN = 2
+DEFAULT_BORDER_WIDTH = 70
+DEFAULT_VAL_THRESHOLD = 30
