@@ -3,12 +3,12 @@ import os
 import cv2 as cv
 import numpy as np
 
-from DeepCream.constants import rep_path
+from DeepCream.constants import REP_PATH
 
 from DeepCream.cloud_analysis.analysis import Analysis
 
 path = os.path.normpath(
-    os.path.join(rep_path, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
+    os.path.join(REP_PATH, 'sample_data/Data/zz_astropi_1_photo_364.jpg'))
 
 analysis = 0
 
@@ -19,7 +19,7 @@ def test_create_analysis():
     img = cv.imread(path)
     assert img is not None
 
-    analysis_ = Analysis(img, 0, 5, 0)
+    analysis_ = Analysis(img, 5, 5, 0)
     assert analysis_ is not None
     assert analysis_.clouds
     analysis = analysis_

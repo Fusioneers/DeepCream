@@ -1,15 +1,14 @@
 import logging
-from DeepCream.constants import (time_format,
-                                 logging_format,
-                                 rep_path,
-                                 logging_level,
-                                 log_path, )
+from DeepCream.constants import (TIME_FORMAT,
+                                 LOGGING_FORMAT,
+                                 REP_PATH,
+                                 LOGGING_LEVEL,
+                                 LOG_PATH, )
 
-with open(log_path, 'w') as log:
-    print('opened log_path')
+with open(LOG_PATH, 'w') as log:
+    print('opened LOG_PATH')
     logging.basicConfig(
-        filename=log_path,
-        format=logging_format, level=logging_level,
-        datefmt=time_format)
+        filename=LOG_PATH,
+        format=LOGGING_FORMAT, level=LOGGING_LEVEL)
     print('configured logging')
     logging.info('Started DeepCream/__init__.py')

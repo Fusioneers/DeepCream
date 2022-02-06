@@ -2,18 +2,18 @@ import os
 import logging
 from datetime import datetime
 
-rep_path = os.path.normpath(
+REP_PATH = os.path.normpath(
     os.path.dirname(__file__).removesuffix('DeepCream'))
 
-time_format = '%Y-%m-%d %H-%M-%S'
+TIME_FORMAT = '%Y-%m-%d %H-%M-%S'
 
-logging_format = '%(asctime)s: %(filename)s: line %(lineno)d: ' \
-                 '%(levelname)s: %(message)s'
+LOGGING_FORMAT = '%(asctime)s: %(name)s: %(filename)s: %(funcName)s: ' \
+                 'line %(lineno)d: %(levelname)s: %(message)s'
 
-logging_level = logging.DEBUG
+LOGGING_LEVEL = logging.DEBUG
 
-log_path = os.path.normpath(os.path.join(
-    rep_path, f'logs/{datetime.today().strftime(time_format)}.log'))
+LOG_PATH = os.path.normpath(os.path.join(
+    REP_PATH, f'logs/{datetime.today().strftime(TIME_FORMAT)}.log'))
 
-default_appr_dist = 3
-default_step_len = 2
+DEFAULT_APPR_DIST = 3
+DEFAULT_STEP_LEN = 2

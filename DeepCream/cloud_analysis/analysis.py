@@ -26,7 +26,7 @@ import cv2 as cv
 import numpy as np
 
 from DeepCream.cloud_detection.cloud_filter import CloudFilter
-from DeepCream.constants import default_step_len, default_appr_dist
+from DeepCream.constants import DEFAULT_STEP_LEN, DEFAULT_APPR_DIST
 
 
 # TODO update documentation
@@ -61,7 +61,7 @@ class Analysis:
     """
 
     def __init__(self, orig: np.ndarray,
-                 min_size_proportion: float,
+                 max_num_clouds: int,
                  border_width: int,
                  contrast_threshold: float):
         """Initialises Analysis.
@@ -70,7 +70,7 @@ class Analysis:
             orig:
                 The original RGB image which is passed during initialisation.
                 It should have the shape (height, width, channels).
-            num_clouds:
+            max_num_clouds:
                 The number of clouds which are created.
             border_threshold:
                 The allowed proportion of the number of pixels which
@@ -85,16 +85,16 @@ class Analysis:
         self.mask = self._get_mask()
         logging.info('Created mask')
         if not np.any(self.mask):
-            logging.warning('Orig has no clouds')
             self.contours = ()
             self.clouds = []
+            logging.warning('Orig has no clouds')
         else:
             self.contours = self._get_contours()
             logging.info('Created contours')
 
-            self.clouds = self._get_clouds(self.contours, min_size_proportion,
+            self.clouds = self._get_clouds(self.contours, max_num_clouds,
                                            border_width, contrast_threshold)
-            logging.info('Created clouds')
+            logging.info(f'Created {len(self.clouds)} clouds')
 
     def _get_mask(self) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
@@ -124,11 +124,11 @@ class Analysis:
 
         This function computes the contours of orig. those get filtered by the
         proportion of pixels they share with the edge of the visible area to
-        ensure that only whole clouds get analysed. The num_clouds largest
+        ensure that only whole clouds get analysed. The max_num_clouds largest
         clouds (sorted by area) are then returned.
 
         Args:
-            num_clouds:
+            max_num_clouds:
                 The number of clouds which are created.
             border_threshold:
                 The allowed proportion of the number of pixels which
@@ -157,11 +157,9 @@ class Analysis:
 
     def _get_clouds(self,
                     contours: list,
-                    min_size_proportion: float,
+                    max_num_clouds: int,
                     border_width: int,
                     contrast_threshold: float) -> list:
-
-        min_size = min_size_proportion * self.height * self.width
 
         clouds = []
         for contour in contours:
@@ -171,31 +169,39 @@ class Analysis:
             clouds.append(self.Cloud(self.orig, img, mask, contour))
         logging.debug('Created list of all clouds')
 
-        # TODO instead of a threshold get the n smallest, the n largest etc.
-        big_clouds = list(
-            filter(lambda cloud: cloud.contour_area >= min_size, clouds))
-        logging.debug('Filtered clouds by size')
-
-        non_image_border_clouds = list(
-            filter(lambda cloud: np.all(
-                cloud.contour[:, 1] >= border_width) and np.all(
-                cloud.contour[:, 1] <= cloud.height - border_width),
-                   big_clouds))
-        logging.debug('Filtered clouds by image border')
-
         def check_valid(cloud):
             diff_edges = cloud.diff_edges(border_width, border_width)
             if not diff_edges.size:
                 out = False
             else:
-                out = np.max(cloud.diff_edges(border_width, border_width))
+                max_val = np.max(cloud.diff_edges(border_width, border_width))
+                out = max_val <= contrast_threshold
             return out
 
-        visible_area_clouds = list(
-            filter(check_valid, non_image_border_clouds))
-        logging.debug('Filtered clouds by visible area border')
+        if not contrast_threshold:
+            valid_clouds = clouds
+        else:
+            non_image_border_clouds = list(
+                filter(lambda cloud: np.all(
+                    cloud.contour[:, 1] >= border_width) and np.all(
+                    cloud.contour[:, 1] <= cloud.height - border_width),
+                       clouds))
+            logging.debug('Filtered clouds by image border')
 
-        return visible_area_clouds
+            valid_clouds = list(
+                filter(check_valid, non_image_border_clouds))
+            logging.debug('Filtered clouds by visible area border')
+
+        if len(valid_clouds) <= max_num_clouds:
+            out = valid_clouds
+            logging.debug(
+                'There are less or equal valid clouds than max_num_clouds')
+        else:
+            indices = np.linspace(0, len(valid_clouds) - 1,
+                                  num=max_num_clouds).astype('int')
+            out = [valid_clouds[idx] for idx in indices]
+            logging.debug('Filtered clouds by size')
+        return out
 
     class Cloud:
         """A single cloud in orig.
@@ -270,8 +276,6 @@ class Analysis:
             self.hull_perimeter = cv.arcLength(self.hull, True)
             self.hull_area = cv.contourArea(self.hull)
 
-            logging.debug('Initialised cloud')
-
         def roundness(self) -> float:
             """Gets the roundness of the cloud."""
             return (4 * np.pi * self.contour_area) / (
@@ -335,9 +339,10 @@ class Analysis:
         def edges(self,
                   in_steps: int,
                   out_steps: int,
-                  appr_dist: int = default_appr_dist,
-                  step_len: float = default_step_len) -> np.ndarray:
-            """Gets samples of the surroundings of the contour of the cloud.
+                  appr_dist: int = DEFAULT_APPR_DIST,
+                  step_len: float = DEFAULT_STEP_LEN) -> np.ndarray:
+            """Gets samples of the surroundings of the contour of the
+            cloud.
 
             First, perpendicular vectors to the contour are created. Those are
             estimated by computing the tangents for each pixel on the contour.
@@ -408,7 +413,7 @@ class Analysis:
             logging.debug('Created valid_spans')
 
             if not valid_spans.size:
-                logging.warning('The cloud has no valid spans')
+                logging.info('The cloud has no valid spans')
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
@@ -420,8 +425,8 @@ class Analysis:
         def diff_edges(self,
                        in_dist: float,
                        out_dist: float,
-                       appr_dist: int = default_appr_dist,
-                       step_len: float = default_step_len) -> np.ndarray:
+                       appr_dist: int = DEFAULT_APPR_DIST,
+                       step_len: float = DEFAULT_STEP_LEN) -> np.ndarray:
             """A measurement for the roughness of the edge of the cloud.
 
             The function computes an average roughness of the edge of the cloud
