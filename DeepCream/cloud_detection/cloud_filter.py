@@ -7,6 +7,7 @@ from DeepCream.cloud_detection.unet_model import unet_model
 from DeepCream.constants import ABS_PATH
 
 
+# TODO write test
 class CloudFilter:
     def __init__(self,
                  blur=3, h_min=0, h_max=179, s_min=0, s_max=50, v_min=145,

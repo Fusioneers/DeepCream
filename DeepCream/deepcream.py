@@ -15,16 +15,12 @@ class DeepCream:
         self.output_directory = output_directory
 
     def start(self):
-        cf = CloudFilter(tpu_support=False)
-        mask = cf.evaluate_image('photo_00150_51846468570_o.jpg')
-        cv.imwrite(os.path.join(ABS_PATH, self.output_directory, 'test.TIF'),
-                   mask)
-        return '200 Successful'
+        pass
 
     def __get_img(self) -> np.ndarray:
         pass
 
-    def __get_mask(self, orig: np.ndarray) -> np.ndarray:
+    def __get_mask(self, path: str) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
 
         Returns:
@@ -37,10 +33,9 @@ class DeepCream:
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
 
-        mask, _ = cloud_filter.evaluate_image(Image.open(orig))
-        logging.debug('Evaluated orig with CloudFilter')
+        mask, _ = cloud_filter.evaluate_image(Image.open(path))
+        logging.debug('Evaluated image with CloudFilter')
 
-        out = cv.resize(mask, (orig.shape[1], orig.shape[0]))
-        logging.debug('Resized mask')
+        out = cv.resize(mask, (mask.shape[1], mask.shape[0]))
 
         return out

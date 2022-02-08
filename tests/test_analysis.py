@@ -2,33 +2,35 @@ import pytest
 import os
 import cv2 as cv
 import numpy as np
-
-from DeepCream.constants import ABS_PATH
+from PIL import Image
 
 from DeepCream.cloud_analysis.analysis import Analysis
+from DeepCream.cloud_detection.cloud_filter import CloudFilter
+
+from DeepCream.constants import ABS_PATH
 
 path = os.path.normpath(
     os.path.join(ABS_PATH, 'data/Data/zz_astropi_1_photo_364.jpg'))
 
-# TODO find a better solution, but this is a low priority task, just make sure
-#   test_create_analysis is at the top
-analysis = None
-
-
 # TODO test whether the values are meaningful
 # TODO test the performance
 
-def test_create_analysis():
-    global analysis
+cloud_filter = CloudFilter()
+mask, _ = cloud_filter.evaluate_image(Image.open(path))
 
+out = cv.resize(mask, (mask.shape[1], mask.shape[0]))
+
+
+def test_create_analysis():
     img = cv.imread(path)
     assert img is not None
 
-    # TODO correct parameters
-    analysis_ = Analysis(img, 5, 5, 20)
-    assert analysis_ is not None
-    assert analysis_.clouds
-    analysis = analysis_
+    analysis = Analysis(img, mask, 5, 0.2)
+    assert analysis is not None
+    assert analysis.clouds
+
+
+analysis = Analysis(cv.imread(path), mask, 5, 0.2)
 
 
 @pytest.mark.parametrize('obj', [
