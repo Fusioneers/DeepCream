@@ -1,5 +1,3 @@
-# ----------------- THE DOCUMENTATION IS NOT UP TO DATE! --------------------
-
 """Module containing a class to analyse pictures taken with the AstroPi.
 
 This module contains a single class named Analysis, which is initialised with a
@@ -11,8 +9,13 @@ properties such as convexity or transparency can be read off.
     import cv2 as cv
 
     image = cv.imread(path)
+
+    cloud_filter = CloudFilter()
+    mask, _ = cloud_filter.evaluate_image(orig)
+    mask = cv.resize(mask, (image.shape[1], image.shape[0]))
+
     max_number_of_clouds = 10
-    analysis = Analysis(image, max_number_of_clouds)
+    analysis = Analysis(image, mask, max_number_of_clouds)
 
     print(f'Convexity: {analysis.clouds[0].convexity()}')
     print(f'Transparency: {analysis.clouds[0].transparency()}')
@@ -24,7 +27,6 @@ import logging
 import cv2 as cv
 import numpy as np
 
-from DeepCream.cloud_detection.cloud_filter import CloudFilter
 from DeepCream.constants import (DEFAULT_STEP_LEN,
                                  DEFAULT_APPR_DIST,
                                  DEFAULT_BORDER_WIDTH,
@@ -45,29 +47,35 @@ class Analysis:
 
         Attributes:
             orig:
-                The original image which is passed during initialisation.
+            The original image which is passed during initialisation.
+
             height:
-                The height in pixels of orig.
+            The height in pixels of orig.
+
             width:
-                The width in pixels of orig.
+            The width in pixels of orig.
+
             mask:
-                A numpy array which corresponds to an image which has the same
-                height and width as orig, with a 255 for a pixel which is
-                estimated to be a cloud and a 0 otherwise. It has the same
-                shape as orig, but only a single channel.
+            A numpy array which corresponds to an image which has the same
+            height and width as orig, with a 255 for a pixel which is
+            estimated to be a cloud and a 0 otherwise. It has the same
+            shape as orig, but only a single channel.
+
             contours:
-                A tuple containing numpy arrays which represent the contours
-                of the detected clouds. Only clouds whose contour does not
-                overlap too much with the edge of the visible area are valid.
-                Then the largest clouds are selected. If there are less valid
-                clouds in the image than the specified value all valid clouds
-                are returned.
+            A tuple containing numpy arrays which represent the contours
+            of the detected clouds. Only clouds whose contour does not
+            overlap too much with the edge of the visible area are valid.
+            Then the largest clouds are selected. If there are less valid
+            clouds in the image than the specified value all valid clouds
+            are returned.
 
             clouds:
-                A list of cloud objects resembling each a cloud in the image.
+            A list of cloud objects resembling each a cloud in the image.
     """
 
-    def __init__(self, orig: np.ndarray,
+    def __init__(self,
+                 orig: np.ndarray,
+                 mask: np.ndarray,
                  max_num_clouds: int,
                  border_width: int = DEFAULT_BORDER_WIDTH,
                  val_threshold: float = DEFAULT_VAL_THRESHOLD):
@@ -75,63 +83,54 @@ class Analysis:
 
         Args:
             orig:
-                The original RGB image which is passed during initialisation.
-                It should have the shape (height, width, channels).
+            The original RGB image which is passed during initialisation.
+            It should have the shape (height, width, channels).
+
+            mask:
+            A mask which determines whether a pixel belongs to a clouds.
+            It is a numpy array which corresponds to an image which has the
+            same height and width as orig, with a 255 for a pixel which is
+            estimated to be a cloud and a 0 otherwise. It should have the
+            same shape as orig, but only a single channel i.e. shape
+            (height, width).
+
             max_num_clouds:
-                The maximum number of clouds to be created. If there
-                are fewer clouds than the specified value in the image all
-                valid clouds are returned.
+            The maximum number of clouds to be created. If there
+            are fewer clouds than the specified value in the image all
+            valid clouds are returned.
+
             border_width:
-                The distance in pixels from the edge of the visible area to the
-                contour a cloud is allowed to be.
+            The distance in pixels from the edge of the visible area to the
+            contour a cloud is allowed to be.
+
             val_threshold:
-                The value (as in HSV) that is considered to lie outside the
-                visible area.
-                """
+            The value (as in HSV) that is considered to lie outside the
+            visible area.
+            """
 
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
 
-        self.mask = self._get_mask()
+        self.mask = mask
         logging.info('Created mask')
         if not np.any(self.mask):
             self.contours = ()
             self.clouds = []
             logging.warning('Orig has no clouds')
         else:
-            self.contours = self._get_contours()
+            self.contours = self.__get_contours()
             logging.info('Created contours')
 
-            self.clouds = self._get_clouds(self.contours, max_num_clouds,
-                                           border_width, val_threshold)
+            self.clouds = self.__get_clouds(self.contours, max_num_clouds,
+                                            border_width, val_threshold)
             logging.info(f'Created {len(self.clouds)} clouds')
 
-    def _get_mask(self) -> np.ndarray:
-        """Gets the cloud mask from CloudFilter.
-
-        Returns:
-            A numpy array which corresponds to an image which has the same
-            height and width as orig, with a 255 for a pixel which is
-            estimated to be a cloud and a 0 otherwise. It has the same shape
-            as orig, but only a single channel i.e. shape (height, width).
-        """
-        cloud_filter = CloudFilter()
-        logging.debug('Initialised CloudFilter')
-
-        mask, _ = cloud_filter.evaluate_image(self.orig)
-        logging.debug('Evaluated orig with CloudFilter')
-
-        out = cv.resize(mask, (self.width, self.height))
-        logging.debug('Resized mask')
-
-        return out
-
-    def _get_contours(self) -> list[np.ndarray]:
+    def __get_contours(self) -> list[np.ndarray]:
         """Gets the contours of the clouds.
 
         Returns:
-            A tuple containing numpy arrays which represent the coordinates of
-            the contours.
+        A list containing numpy arrays which represent the coordinates of
+        the contours.
         """
 
         contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
@@ -143,18 +142,48 @@ class Analysis:
 
         return contours
 
-    # TODO test performance. If it is too slow convert to generator.
-    def _get_clouds(self,
-                    contours: list,
-                    max_num_clouds: int,
-                    border_width: int,
-                    val_threshold: float) -> list:
-        clouds = []
+    # TODO Convert to generator function to increase performance
+    # TODO Test this function
+    def __get_clouds(self,
+                     contours: list,
+                     max_num_clouds: int,
+                     border_width: int = DEFAULT_BORDER_WIDTH,
+                     val_threshold: float = DEFAULT_VAL_THRESHOLD) -> list:
+        """Creates and filters the cloud objects.
+
+        This method packs the contour, image, mask and orig of a cloud into a
+        cloud object, filters and returns the largest of them. The filtering is
+        based around the problem, that clouds, which share a major part of
+        their border with the edge of the visible area, distort the final
+        analysis because of their seemingly super smooth border. So clouds,
+        which are near this edge, are called invalid and therefore not
+        considered for further analysis.
+
+        Args:
+            contours:
+            A list containing numpy arrays which represent the coordinates of
+            the contours.
+
+            max_num_clouds:
+            The maximum number of clouds which should be returned. In most
+            cases this value is satisfied, except for the images with very few
+            clouds.
+
+            border_width:
+            At the edge of the visible area there is a thin strip of pixels
+            which neither belong to the outside i.e. clouds and water nor to
+            the black surroundings. border_width is the distance in pixels from
+            the certain-black to the certain-outside. A higher value means that
+            the cloud has to be further away from the border to be considered
+            valid.
+        """
+
+        all_clouds = []
         for contour in contours:
             mask = np.zeros((self.height, self.width), np.uint8)
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
-            clouds.append(self.Cloud(self.orig, img, mask, contour))
+            all_clouds.append(self.Cloud(self.orig, img, mask, contour))
         logging.debug('Created list of all clouds')
 
         def check_valid(cloud):
@@ -167,33 +196,35 @@ class Analysis:
             return out
 
         if not val_threshold:
-            valid_clouds = clouds
+            valid_clouds = all_clouds
         else:
             non_image_border_clouds = list(
                 filter(lambda cloud: np.all(
                     cloud.contour[:, 1] >= border_width) and np.all(
                     cloud.contour[:, 1] <= cloud.height - border_width),
-                       clouds))
+                       all_clouds))
             logging.debug('Filtered clouds by image border')
 
             valid_clouds = list(
                 filter(check_valid, non_image_border_clouds))
             logging.debug('Filtered clouds by visible area border')
 
+        # TODO set a maximum value for the number of pixels at the border
         valid_clouds = sorted(valid_clouds,
                               key=lambda cloud: getattr(cloud, 'contour_area'),
                               reverse=True)
 
         if len(valid_clouds) <= max_num_clouds:
-            out = valid_clouds
+            clouds = valid_clouds
             logging.debug(
                 'There are less or equal valid clouds than max_num_clouds')
         else:
-            out = valid_clouds[:max_num_clouds]
+            clouds = valid_clouds[:max_num_clouds]
             logging.debug('Filtered clouds by size')
 
-        return out
+        return clouds
 
+    # -------------- THE DOCUMENTATION IS NOT UP TO DATE! -----------------
     class Cloud:
         """A single cloud in orig.
 
@@ -202,33 +233,43 @@ class Analysis:
 
         Attributes:
             orig:
-                The original image which is passed during initialisation.
+            The original image which is passed during initialisation.
+
             height:
-                The height in pixels of orig.
+            The height in pixels of orig.
+
             width:
-                The width in pixels of orig.
+            The width in pixels of orig.
+
             img:
-                A mostly black image with only the cloud itself visible. It
-                can also be obtained by combining orig with mask.
+            A mostly black image with only the cloud itself visible. It
+            can also be obtained by combining orig with mask.
+
             mask:
-                A numpy array which corresponds to an image which has the same
-                height and width as orig, with a 255 for a pixel which belongs
-                cloud and a 0 otherwise. It has the same shape as orig, but
-                only a single channel.
+            A numpy array which corresponds to an image which has the same
+            height and width as orig, with a 255 for a pixel which belongs
+            cloud and a 0 otherwise. It has the same shape as orig, but
+            only a single channel.
+
             contour:
-                A numpy array containing the coordinates of the edge of the
-                cloud.
+            A numpy array containing the coordinates of the edge of the
+            cloud.
+
             contour_perimeter:
-                The perimeter of the contour.
+            The perimeter of the contour.
+
             contour_area:
-                The area of the contour.
+            The area of the contour.
+
             hull:
-                a numpy array similar to contour. It represents the convex
-                hull around contour.
+            a numpy array similar to contour. It represents the convex
+            hull around contour.
+
             hull_perimeter:
-                The perimeter of the hull.
+            The perimeter of the hull.
+
             hull_area:
-                The area of the hull.
+            The area of the hull.
         """
 
         def __init__(self, orig: np.ndarray,
@@ -239,20 +280,23 @@ class Analysis:
 
             Args:
                 orig:
-                    The original RGB image which is passed during
-                    initialisation. It should have the shape
-                    (height, width, channels).
+                The original RGB image which is passed during
+                initialisation. It should have the shape
+                (height, width, channels).
+
                 img:
-                    A mostly black image with only the cloud itself visible.
-                    It can also be obtained by combining orig with mask.
+                A mostly black image with only the cloud itself visible.
+                It can also be obtained by combining orig with mask.
+
                 mask:
-                    A numpy array which corresponds to an image which has the
-                    same height and width as orig, with a 255 for a pixel which
-                    belongs cloud and a 0 otherwise. It has the same shape as
-                    orig, but only a single channel.
+                A numpy array which corresponds to an image which has the
+                same height and width as orig, with a 255 for a pixel which
+                belongs cloud and a 0 otherwise. It has the same shape as
+                orig, but only a single channel.
+
                 contour:
-                    A numpy array containing the coordinates of the edge of the
-                    cloud.
+                A numpy array containing the coordinates of the edge of the
+                cloud.
             """
 
             self.orig = orig
@@ -269,38 +313,46 @@ class Analysis:
 
         def roundness(self) -> float:
             """Gets the roundness of the cloud."""
+
             return (4 * np.pi * self.contour_area) / (
                     self.hull_perimeter ** 2)
 
         def convexity(self) -> float:
             """Gets the convexity of the cloud."""
+
             return self.hull_perimeter / self.contour_perimeter
 
         def compactness(self) -> float:
             """Gets the compactness of the cloud."""
+
             return (4 * np.pi * self.contour_area) / (
                     self.contour_perimeter ** 2)
 
         def solidity(self) -> float:
             """Gets the solidity of the cloud."""
+
             return self.contour_area / self.hull_area
 
         def rectangularity(self) -> float:
             """Gets the rectangularity of the cloud."""
+
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return self.contour_area / (width * height)
 
         def elongation(self) -> float:
             """Gets the elongation of the cloud."""
+
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return min(width, height) / max(width, height)
 
         def mean(self) -> list:
             """Gets the mean of each channel inside the cloud"""
+
             return cv.mean(self.img, mask=self.mask)
 
         def std(self) -> tuple:
             """Gets the standard deviation of each channel inside the cloud."""
+
             _, std = cv.meanStdDev(self.img, mask=self.mask)
             std = (std[0][0], std[1][0], std[2][0])
             return std
@@ -351,26 +403,30 @@ class Analysis:
 
             Args:
                 num_samples:
-                    The number of samples of the edge to be returned.
+                The number of samples of the edge to be returned.
+
                 in_steps:
-                    The number of steps the span reaches into cloud from the
-                    boundary excluding the boundary itself.
+                The number of steps the span reaches into cloud from the
+                boundary excluding the boundary itself.
+
                 out_steps:
-                    The number of steps the span reaches out of the cloud from
-                    the boundary excluding the boundary itself.
+                The number of steps the span reaches out of the cloud from
+                the boundary excluding the boundary itself.
+
                 appr_dist:
-                    The contour approximation vectors i.e. tangents of the
-                    contour are estimated by a secant from the point itself to
-                    the appr_dist next point. A high value of e.g. 10 means
-                    that the approximation may be more accurate, while for a
-                    very rough boundary it is better to choose a lower value.
-                    A value smaller than 1 should be avoided.
+                The contour approximation vectors i.e. tangents of the
+                contour are estimated by a secant from the point itself to
+                the appr_dist next point. A high value of e.g. 10 means
+                that the approximation may be more accurate, while for a
+                very rough boundary it is better to choose a lower value.
+                A value smaller than 1 should be avoided.
+
                 step_len:
-                    The distance between each point in the span. A low value
-                    gives a more dense overview of the edge, while a higher one
-                    yields a wider range. Note that for a value of 1 some
-                    points can be the same. A value smaller than 1 should be
-                    avoided.
+                The distance between each point in the span. A low value
+                gives a more dense overview of the edge, while a higher one
+                yields a wider range. Note that for a value of 1 some
+                points can be the same. A value smaller than 1 should be
+                avoided.
 
             Returns:
                 A numpy array of shape

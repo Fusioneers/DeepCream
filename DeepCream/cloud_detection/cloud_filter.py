@@ -17,36 +17,48 @@ class CloudFilter:
         """
 
         Args:
-            image_directory: The path to the images with the cloud images
+            image_directory:
+            The path to the images with the cloud images
 
         Optional Args:
             binary_cloud_threshold:
             The threshold (between 0 and 255) which determines if the pixel is
             part of a cloud.
+
             blur:
             The blur cv2.blur uses in cv_generate_image_mask to adjust the
             input image.
+
             contrast:
             The contrast cv2.convertScaleAbs uses in cv_generate_image_mask to
             adjust the input image.
+
             brightness:
             The brightness cv2.convertScaleAbs uses in cv_generate_image_mask
             to adjust the input image.
+
             h_min:
             The minimum hue for a pixel to be considered a cloud.
+
             h_max:
             The maximum hue for a pixel to be considered a cloud.
+
             s_min:
             The minimum saturation for a pixel to be considered a cloud.
+
             s_max:
             The maximum saturation for a pixel to be considered a cloud.
+
             v_min:
             The minimum value for a pixel to be considered a cloud.
+
             v_max:
             The maximum value for a pixel to be considered a cloud.
+
             weight_ai:
             The importance of the AI prediction (from 0 to 1), the higher the
             value the more importance.
+
             tpu_support:
             Whether the systems support a tpu (False by default).
         """
@@ -101,6 +113,7 @@ class CloudFilter:
         Returns:
             normal:
             The image resized to (self.WIDTH, self.HEIGHT).
+
             scaled:
             The image resized to (self.WIDTH, self.HEIGHT) and scaled to have
             pixel values between 0 and 1.
@@ -159,7 +172,8 @@ class CloudFilter:
         """
 
         Args:
-            image: The cloud image in rgb format.
+            image:
+            The cloud image in rgb format.
 
         Returns:
             The cloud mask (calculated by OpenCV) in grayscale format.
