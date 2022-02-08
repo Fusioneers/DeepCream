@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from DeepCream.cloud_analysis.analysis import Analysis
 
+# TODO __init__ has changed, see in the docstring of analysis
 analysis = Analysis(
     cv.imread('../../data/Data/zz_astropi_1_photo_364.jpg'), 5)
 

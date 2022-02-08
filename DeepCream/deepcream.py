@@ -33,6 +33,7 @@ class DeepCream:
             estimated to be a cloud and a 0 otherwise. It has the same shape
             as orig, but only a single channel i.e. shape (height, width).
         """
+        # TODO convert directory to image
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
 

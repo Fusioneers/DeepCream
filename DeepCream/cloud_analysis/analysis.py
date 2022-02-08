@@ -77,6 +77,7 @@ class Analysis:
                  orig: np.ndarray,
                  mask: np.ndarray,
                  max_num_clouds: int,
+                 max_border_proportion: float,
                  border_width: int = DEFAULT_BORDER_WIDTH,
                  val_threshold: float = DEFAULT_VAL_THRESHOLD):
         """Initialises Analysis.
@@ -98,6 +99,10 @@ class Analysis:
             The maximum number of clouds to be created. If there
             are fewer clouds than the specified value in the image all
             valid clouds are returned.
+
+            max_border_proportion:
+            The maximum proportion of the convex hull a cloud is allowed to
+            share with the edge of the visible area.
 
             border_width:
             The distance in pixels from the edge of the visible area to the
@@ -121,8 +126,11 @@ class Analysis:
             self.contours = self.__get_contours()
             logging.info('Created contours')
 
-            self.clouds = self.__get_clouds(self.contours, max_num_clouds,
-                                            border_width, val_threshold)
+            self.clouds = self.__get_clouds(self.contours,
+                                            max_num_clouds,
+                                            max_border_proportion,
+                                            border_width,
+                                            val_threshold)
             logging.info(f'Created {len(self.clouds)} clouds')
 
     def __get_contours(self) -> list[np.ndarray]:
@@ -147,8 +155,9 @@ class Analysis:
     def __get_clouds(self,
                      contours: list,
                      max_num_clouds: int,
-                     border_width: int = DEFAULT_BORDER_WIDTH,
-                     val_threshold: float = DEFAULT_VAL_THRESHOLD) -> list:
+                     max_border_proportion: float,
+                     border_width: float,
+                     val_threshold: float) -> list:
         """Creates and filters the cloud objects.
 
         This method packs the contour, image, mask and orig of a cloud into a
@@ -169,6 +178,10 @@ class Analysis:
             cases this value is satisfied, except for the images with very few
             clouds.
 
+            max_border_proportion:
+            The maximum proportion of the convex hull a cloud is allowed to
+            share with the edge of the visible area.
+
             border_width:
             At the edge of the visible area there is a thin strip of pixels
             which neither belong to the outside i.e. clouds and water nor to
@@ -186,13 +199,16 @@ class Analysis:
             all_clouds.append(self.Cloud(self.orig, img, mask, contour))
         logging.debug('Created list of all clouds')
 
+        # TODO test this
         def check_valid(cloud):
-            edges = cloud.edges(border_width, border_width)
+            edges = cloud.edges(border_width, border_width, convex_hull=True)
             if not edges.size:
                 out = False
             else:
-                min_val = np.min(np.max(edges, axis=2))
-                out = min_val >= val_threshold
+                min_vals = np.min(np.max(edges, axis=2), axis=1)
+                border_proportion = np.count_nonzero(
+                    min_vals >= val_threshold) / len(cloud.hull)
+                out = border_proportion <= max_border_proportion
             return out
 
         if not val_threshold:
@@ -200,8 +216,8 @@ class Analysis:
         else:
             non_image_border_clouds = list(
                 filter(lambda cloud: np.all(
-                    cloud.contour[:, 1] >= border_width) and np.all(
-                    cloud.contour[:, 1] <= cloud.height - border_width),
+                    cloud.hull[:, 1] >= border_width) and np.all(
+                    cloud.hull[:, 1] <= cloud.height - border_width),
                        all_clouds))
             logging.debug('Filtered clouds by image border')
 
@@ -382,6 +398,7 @@ class Analysis:
         def edges(self,
                   in_steps: int,
                   out_steps: int,
+                  convex_hull: bool = False,
                   appr_dist: int = DEFAULT_APPR_DIST,
                   step_len: float = DEFAULT_STEP_LEN) -> np.ndarray:
             """Gets samples of the surroundings of the contour of the
@@ -396,15 +413,12 @@ class Analysis:
             which are a multiple of the original vector. Note that in_steps is
             the number of steps the span reaches into cloud from the boundary
             and out_steps the number of steps out of the cloud. These steps
-            have the length step_len. Then, samples of the spans, which lie
-            fully inside the visible area are returned.
+            have the length step_len. Then the spans which lie fully inside the
+            visible area are returned.
 
             # TODO usage example
 
             Args:
-                num_samples:
-                The number of samples of the edge to be returned.
-
                 in_steps:
                 The number of steps the span reaches into cloud from the
                 boundary excluding the boundary itself.
@@ -412,6 +426,10 @@ class Analysis:
                 out_steps:
                 The number of steps the span reaches out of the cloud from
                 the boundary excluding the boundary itself.
+
+                convex_hull:
+                Whether the spans should be computed with the actual contour or
+                with the convex hull.
 
                 appr_dist:
                 The contour approximation vectors i.e. tangents of the
@@ -430,12 +448,14 @@ class Analysis:
 
             Returns:
                 A numpy array of shape
-                (num_samples, in_steps + out_steps + 1, 3), which is a folded
-                representative sample of the edge of the cloud.
+                (number of valid spans, in_steps + out_steps + 1, 3),
+                which represents the surroundings of the edge of the cloud.
             """
 
-            appr_vec = np.roll(self.contour, appr_dist, axis=0)
-            appr_vec -= self.contour
+            contour = self.hull if convex_hull else self.contour
+
+            appr_vec = np.roll(contour, appr_dist, axis=0)
+            appr_vec -= contour
             appr_vec_norm = np.linalg.norm(appr_vec, axis=1)
             appr_vec = appr_vec * step_len / np.tile(appr_vec_norm, (2, 1)).T
 
@@ -443,7 +463,7 @@ class Analysis:
             perp_vec[:, 0] *= -1
 
             span_range = np.arange(-in_steps, out_steps + 1)[:, np.newaxis]
-            spans = [np.matmul(span_range, vec[np.newaxis]) + self.contour[n]
+            spans = [np.matmul(span_range, vec[np.newaxis]) + contour[n]
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
 
@@ -466,6 +486,7 @@ class Analysis:
         def diff_edges(self,
                        in_dist: float,
                        out_dist: float,
+                       convex_hull: bool = False,
                        appr_dist: int = DEFAULT_APPR_DIST,
                        step_len: float = DEFAULT_STEP_LEN) -> np.ndarray:
             """A measurement for the roughness of the edge of the cloud.
@@ -481,7 +502,9 @@ class Analysis:
             """
             edges = self.edges(int(np.floor(in_dist / step_len)),
                                int(np.floor(out_dist / step_len)),
-                               appr_dist, step_len)
+                               convex_hull=convex_hull,
+                               appr_dist=appr_dist,
+                               step_len=step_len)
             if not edges.size:
                 return np.array([])
 

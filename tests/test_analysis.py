@@ -10,6 +10,7 @@ from DeepCream.cloud_analysis.analysis import Analysis
 path = os.path.normpath(
     os.path.join(ABS_PATH, 'data/Data/zz_astropi_1_photo_364.jpg'))
 
+# TODO find better solution, but has low priority
 analysis = 0
 
 
@@ -22,6 +23,7 @@ def test_create_analysis():
     img = cv.imread(path)
     assert img is not None
 
+    # TODO correct parameters
     analysis_ = Analysis(img, 5, 5, 20)
     assert analysis_ is not None
     assert analysis_.clouds
