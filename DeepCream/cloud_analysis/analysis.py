@@ -35,9 +35,6 @@ from DeepCream.constants import (DEFAULT_STEP_LEN,
 logging.info('Started DeepCream/cloud_analysis/analysis.py')
 
 
-# TODO update documentation
-
-
 class Analysis:
     """A class for analysing clouds in an image taken with the AstroPi.
 
@@ -150,7 +147,6 @@ class Analysis:
 
         return contours
 
-    # TODO Convert to generator function to increase performance
     # TODO Test this function
     def __get_clouds(self,
                      contours: list,
@@ -211,36 +207,33 @@ class Analysis:
                 out = border_proportion <= max_border_proportion
             return out
 
-        if not val_threshold:
-            valid_clouds = all_clouds
+        if max_border_proportion == 1:
+            if len(all_clouds) <= max_num_clouds:
+                clouds = all_clouds
+                logging.debug(
+                    'There are less or equal valid clouds than max_num_clouds')
+            else:
+                clouds = all_clouds[:max_num_clouds]
+                logging.debug('Filtered clouds by size')
         else:
-            non_image_border_clouds = list(
-                filter(lambda cloud: np.all(
-                    cloud.hull[:, 1] >= border_width) and np.all(
-                    cloud.hull[:, 1] <= cloud.height - border_width),
-                       all_clouds))
-            logging.debug('Filtered clouds by image border')
+            all_clouds = sorted(all_clouds,
+                                key=lambda cloud:
+                                getattr(cloud, 'contour_area'), reverse=True)
 
-            valid_clouds = list(
-                filter(check_valid, non_image_border_clouds))
+            # TODO test this
+            clouds = []
+            for cloud in all_clouds:
+                if len(clouds) >= max_num_clouds:
+                    break
+                if np.all(cloud.hull[:, 1] >= border_width):
+                    if np.all(cloud.hull[:, 1] <= cloud.height - border_width):
+                        if check_valid(cloud):
+                            clouds.append(cloud)
+
             logging.debug('Filtered clouds by visible area border')
-
-        # TODO set a maximum value for the number of pixels at the border
-        valid_clouds = sorted(valid_clouds,
-                              key=lambda cloud: getattr(cloud, 'contour_area'),
-                              reverse=True)
-
-        if len(valid_clouds) <= max_num_clouds:
-            clouds = valid_clouds
-            logging.debug(
-                'There are less or equal valid clouds than max_num_clouds')
-        else:
-            clouds = valid_clouds[:max_num_clouds]
-            logging.debug('Filtered clouds by size')
 
         return clouds
 
-    # -------------- THE DOCUMENTATION IS NOT UP TO DATE! -----------------
     class Cloud:
         """A single cloud in orig.
 

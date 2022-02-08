@@ -10,7 +10,7 @@ from DeepCream.cloud_analysis.analysis import Analysis
 path = os.path.normpath(
     os.path.join(ABS_PATH, 'data/Data/zz_astropi_1_photo_364.jpg'))
 
-# TODO find better solution, but has low priority
+# TODO find a better solution, but this is a low priority task
 analysis = 0
 
 
