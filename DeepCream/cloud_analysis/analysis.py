@@ -388,6 +388,7 @@ class Analysis:
                 out = 0
             return out
 
+        # TODO docstring usage example
         def edges(self,
                   in_steps: int,
                   out_steps: int,
@@ -409,7 +410,6 @@ class Analysis:
             have the length step_len. Then the spans which lie fully inside the
             visible area are returned.
 
-            # TODO usage example
 
             Args:
                 in_steps:
