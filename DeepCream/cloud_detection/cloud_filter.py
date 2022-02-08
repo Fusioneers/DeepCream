@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from PIL import Image
 from numpy import asarray
 from pycoral.utils import edgetpu
 
@@ -9,7 +8,7 @@ from DeepCream.constants import ABS_PATH
 
 
 class CloudFilter:
-    def __init__(self, image_directory,
+    def __init__(self,
                  blur=3, h_min=0, h_max=179, s_min=0, s_max=50, v_min=145,
                  v_max=255, contrast=1, brightness=0,
                  weight_ai=0.7, binary_cloud_threshold=100, tpu_support=False):
@@ -17,8 +16,6 @@ class CloudFilter:
         """
 
         Args:
-            image_directory:
-            The path to the images with the cloud images
 
         Optional Args:
             binary_cloud_threshold:
@@ -63,9 +60,6 @@ class CloudFilter:
             Whether the systems support a tpu (False by default).
         """
 
-        # Set the image directory
-        self.image_directory = image_directory + "/"
-
         # Set thresholds for cloud detection
         self.binaryCloudThreshold = binary_cloud_threshold
 
@@ -106,7 +100,7 @@ class CloudFilter:
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
 
-    def __load_image(self, file_name):
+    def __load_image(self, scaled):
 
         """
 
@@ -120,7 +114,6 @@ class CloudFilter:
 
         """
 
-        scaled = Image.open(file_name)
         scaled.thumbnail((self.WIDTH, self.HEIGHT))
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
@@ -219,7 +212,7 @@ class CloudFilter:
 
         return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
 
-    def evaluate_image(self, file_name: object) -> object:
+    def evaluate_image(self, img) -> object:
 
         """
 
@@ -230,10 +223,10 @@ class CloudFilter:
         """
 
         # Check if the file has the correct format
-        assert file_name.endswith('jpg')
+        # assert path.endswith('jpg')
 
         # Load the image
-        normal, scaled = self.__load_image(self.image_directory + file_name)
+        normal, scaled = self.__load_image(img)
 
         # Check if the image actually loaded
         assert normal is not None and scaled is not None

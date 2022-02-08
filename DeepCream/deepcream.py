@@ -3,6 +3,7 @@ import os
 
 import cv2 as cv
 import numpy as np
+from PIL import Image
 
 from DeepCream.cloud_detection.cloud_filter import CloudFilter
 from DeepCream.constants import ABS_PATH
@@ -14,8 +15,7 @@ class DeepCream:
         self.output_directory = output_directory
 
     def start(self):
-        cf = CloudFilter(os.path.join(ABS_PATH, self.input_directory),
-                         tpu_support=False)
+        cf = CloudFilter(tpu_support=False)
         mask = cf.evaluate_image('photo_00150_51846468570_o.jpg')
         cv.imwrite(os.path.join(ABS_PATH, self.output_directory, 'test.TIF'),
                    mask)
@@ -37,7 +37,7 @@ class DeepCream:
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
 
-        mask, _ = cloud_filter.evaluate_image(orig)
+        mask, _ = cloud_filter.evaluate_image(Image.open(orig))
         logging.debug('Evaluated orig with CloudFilter')
 
         out = cv.resize(mask, (orig.shape[1], orig.shape[0]))
