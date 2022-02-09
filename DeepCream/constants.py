@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from utils import get_time
 
 ABS_PATH = os.path.dirname(os.path.normpath(os.path.dirname(__file__)))
 
@@ -12,7 +12,7 @@ LOGGING_FORMAT = '%(asctime)s: %(name)s: %(filename)s: %(funcName)s: ' \
 LOGGING_LEVEL = logging.DEBUG
 
 LOG_PATH = os.path.normpath(os.path.join(
-    ABS_PATH, f'logs/{datetime.today().strftime(TIME_FORMAT)}.log'))
+    ABS_PATH, f'logs/{get_time()}.log'))
 
 DEFAULT_APPR_DIST = 3
 DEFAULT_STEP_LEN = 2
