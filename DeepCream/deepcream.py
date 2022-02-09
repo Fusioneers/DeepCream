@@ -8,7 +8,6 @@ import threading as th
 
 from cloud_detection.cloud_filter import CloudFilter
 from cloud_analysis.analysis import Analysis
-from cloud_analysis.interpretation import Interpretation
 from constants import ABS_PATH
 
 
