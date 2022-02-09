@@ -157,7 +157,7 @@ Structure of the database:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['mask_creation_time']:
+                if not self.metadata['data'][img]['created mask']:
                     identifier = img
                     break
 
@@ -172,7 +172,7 @@ Structure of the database:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['analysis_creation_time']:
+                if not self.metadata['data'][img]['created analysis']:
                     identifier = img
                     break
 
@@ -187,7 +187,30 @@ Structure of the database:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['type_creation_time']:
+                if not self.metadata['data'][img]['created type']:
+                    identifier = img
+                    break
+
+        if not identifier:
+            logging.error('No not interpreted image in database')
+            raise LookupError('No not interpre image in database')
+
+        return (cv.imread(os.path.join(self.data_dir, str(identifier),
+                                       'orig.png')), identifier)
+
+    def load_mask_by_id(self, identifier: int) -> np.ndarray:
+        if identifier not in self.metadata['data']:
+            logging.error('Identifier not available in database')
+            raise ValueError('Identifier not available in database')
+
+        return cv.imread(
+            os.path.join(self.data_dir, str(identifier), 'mask.png'))
+
+    def load_mask_by_empty_analysis(self) -> tuple[np.ndarray, int]:
+        identifier = None
+        for img in range(1, len(self.metadata['data']) + 1):
+            if img in self.metadata['data']:
+                if not self.metadata['data'][img]['created analysis']:
                     identifier = img
                     break
 
@@ -196,4 +219,43 @@ Structure of the database:
             raise LookupError('No not analysed image in database')
 
         return (cv.imread(os.path.join(self.data_dir, str(identifier),
-                                       'orig.png')), identifier)
+                                       'mask.png')), identifier)
+
+    def load_mask_by_id(self, identifier: int) -> np.ndarray:
+        if identifier not in self.metadata['data']:
+            logging.error('Identifier not available in database')
+            raise ValueError('Identifier not available in database')
+
+        return cv.imread(
+            os.path.join(self.data_dir, str(identifier), 'mask.png'))
+
+    def load_analysis_by_id(self, identifier: int) -> pd.DataFrame:
+        if identifier not in self.metadata['data']:
+            logging.error('Identifier not available in database')
+            raise ValueError('Identifier not available in database')
+
+        return pd.read_csv(
+            os.path.join(self.data_dir, str(identifier), 'analysis.csv'))
+
+    def load_analysis_by_empty_type(self) -> tuple[pd.DataFrame, int]:
+        identifier = None
+        for img in range(1, len(self.metadata['data']) + 1):
+            if img in self.metadata['data']:
+                if not self.metadata['data'][img]['created type']:
+                    identifier = img
+                    break
+
+        if not identifier:
+            logging.error('No not interpreted image in database')
+            raise LookupError('No not interpreted image in database')
+
+        return (pd.read_csv(os.path.join(self.data_dir, str(identifier),
+                                         'orig.png')), identifier)
+
+    def load_type_by_id(self, identifier: int) -> pd.DataFrame:
+        if identifier not in self.metadata['data']:
+            logging.error('Identifier not available in database')
+            raise ValueError('Identifier not available in database')
+
+        return pd.read_csv(
+            os.path.join(self.data_dir, str(identifier), 'type.csv'))
