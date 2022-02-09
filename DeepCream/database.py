@@ -2,16 +2,17 @@ import json
 import logging
 import os
 
-import numpy as np
 import cv2 as cv
+import numpy as np
 import pandas as pd
 
+from constants import ABS_PATH
 from utils import get_time
 
 
+# TODO docstrings
+# TODO tests
 class DataBase:
-    # TODO document the structure of the database
-
     """
     
 Structure of the database:
@@ -24,7 +25,7 @@ Structure of the database:
         data/
             1/
                 metadata.json/
-                    orig_creation_time
+                    orig creation time
                     created mask
                     created analysis
                     created type
@@ -49,6 +50,10 @@ Structure of the database:
                         std_b
                         transparency
                         mean_diff_edges
+                type.csv/
+                    1/ (cloud)
+                        center_x
+                        center_y
                         type
 
     """
@@ -60,8 +65,7 @@ Structure of the database:
                 logging.error('Directory is not empty')
                 raise ValueError('Directory is not empty')
         else:
-            logging.error('Path is not a directory')
-            raise ValueError('Path is not a directory')
+            os.mkdir(self.base_dir)
 
         self.metadata = {
             'metadata': {
@@ -82,12 +86,13 @@ Structure of the database:
         return os.path.join(self.data_dir, str(identifier))
 
     def save_orig(self, orig: np.ndarray) -> int:
-        identifier = len(self.metadata['data']) + 1
-        # TODO if identifier in database (shouldn't happen, but who knows...)
+        identifier = 1
+        while identifier in self.metadata['data']:
+            identifier += 1
 
         os.mkdir(os.path.join(self.data_dir, str(identifier)))
         self.metadata['data'][identifier] = {
-            'orig_creation_time': get_time(),
+            'orig creation time': get_time(),
             'created mask': False,
             'created analysis': False,
             'created type': False,
@@ -164,7 +169,8 @@ Structure of the database:
         if not identifier:
             logging.error('No not masked image in database')
             raise LookupError('No not masked image in database')
-
+        print(os.path.join(self.data_dir, str(identifier),
+                           'orig.png'))
         return (cv.imread(os.path.join(self.data_dir, str(identifier),
                                        'orig.png')), identifier)
 
@@ -183,25 +189,14 @@ Structure of the database:
         return (cv.imread(os.path.join(self.data_dir, str(identifier),
                                        'orig.png')), identifier)
 
-    def load_orig_by_empty_type(self) -> tuple[np.ndarray, int]:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created type']:
-                    identifier = img
-                    break
-
-        if not identifier:
-            logging.error('No not interpreted image in database')
-            raise LookupError('No not interpre image in database')
-
-        return (cv.imread(os.path.join(self.data_dir, str(identifier),
-                                       'orig.png')), identifier)
-
     def load_mask_by_id(self, identifier: int) -> np.ndarray:
         if identifier not in self.metadata['data']:
             logging.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
+
+        if not self.metadata['data'][identifier]['created mask']:
+            logging.error('Identifier does not contain a mask')
+            raise ValueError('Identifier does not contain a mask')
 
         return cv.imread(
             os.path.join(self.data_dir, str(identifier), 'mask.png'))
@@ -210,7 +205,8 @@ Structure of the database:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created analysis']:
+                if not self.metadata['data'][img]['created analysis'] and \
+                        self.metadata['data'][identifier]['created mask']:
                     identifier = img
                     break
 
@@ -221,18 +217,14 @@ Structure of the database:
         return (cv.imread(os.path.join(self.data_dir, str(identifier),
                                        'mask.png')), identifier)
 
-    def load_mask_by_id(self, identifier: int) -> np.ndarray:
-        if identifier not in self.metadata['data']:
-            logging.error('Identifier not available in database')
-            raise ValueError('Identifier not available in database')
-
-        return cv.imread(
-            os.path.join(self.data_dir, str(identifier), 'mask.png'))
-
     def load_analysis_by_id(self, identifier: int) -> pd.DataFrame:
         if identifier not in self.metadata['data']:
             logging.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
+
+        if not self.metadata['data'][identifier]['created analysis']:
+            logging.error('Identifier does not contain an analysis')
+            raise ValueError('Identifier does not contain an analysis')
 
         return pd.read_csv(
             os.path.join(self.data_dir, str(identifier), 'analysis.csv'))
@@ -241,7 +233,8 @@ Structure of the database:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created type']:
+                if not self.metadata['data'][img]['created type'] and \
+                        self.metadata['data'][identifier]['created analysis']:
                     identifier = img
                     break
 
@@ -257,5 +250,26 @@ Structure of the database:
             logging.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
+        if not self.metadata['data'][identifier]['created type']:
+            logging.error('Identifier does not contain an interpretation')
+            raise ValueError('Identifier does not contain an interpretation')
+
         return pd.read_csv(
             os.path.join(self.data_dir, str(identifier), 'type.csv'))
+
+
+if __name__ == '__main__':
+    db = DataBase(os.path.join(ABS_PATH, 'database'))
+    id_1 = db.save_orig(cv.imread(os.path.join(ABS_PATH, 'data', 'input',
+                                               'photo_00150_51846468570_o.jpg')
+                                  )
+                        )
+    id_2 = db.save_orig(cv.imread(os.path.join(ABS_PATH, 'data', 'input',
+                                               'photo_00151_51844793137_o.jpg')
+                                  )
+                        )
+    db.metadata['data'][2]['created analysis'] = True
+    img, id_3 = db.load_orig_by_empty_analysis()
+    print(id_3)
+    cv.imshow('', img)
+    cv.waitKey()
