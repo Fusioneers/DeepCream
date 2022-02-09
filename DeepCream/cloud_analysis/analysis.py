@@ -314,6 +314,9 @@ class Analysis:
             self.mask = mask
             self.contour = contour
 
+            M = cv.moments(self.contour)
+            self.center = (int(M['m10'] / M['m00']), int(M['m01'] / M['m00']))
+
             self.contour_perimeter = cv.arcLength(self.contour, True)
             self.contour_area = cv.contourArea(self.contour)
             self.hull = cv.convexHull(self.contour)
