@@ -4,9 +4,12 @@ import os
 import cv2 as cv
 import numpy as np
 from PIL import Image
+import threading as th
 
-from DeepCream.cloud_detection.cloud_filter import CloudFilter
-from DeepCream.constants import ABS_PATH
+from cloud_detection.cloud_filter import CloudFilter
+from cloud_analysis.analysis import Analysis
+from cloud_analysis.interpretation import Interpretation
+from constants import ABS_PATH
 
 
 class DeepCream:
@@ -18,6 +21,12 @@ class DeepCream:
         pass
 
     def __get_img(self) -> np.ndarray:
+        pass
+
+    def __save_img(self, img: np.ndarray, directory: str):
+        pass
+
+    def __load_img(self, directory):
         pass
 
     def __get_mask(self, path: str) -> np.ndarray:
@@ -39,3 +48,16 @@ class DeepCream:
         out = cv.resize(mask, (mask.shape[1], mask.shape[0]))
 
         return out
+
+    def __get_analysis(self,
+                       img: np.ndarray,
+                       mask: np.ndarray) -> Analysis:
+        pass
+
+    def __interpretation(self, analysis: Analysis):
+        pass
+
+    def __save_results(self,
+                       analysis_: Analysis,
+                       interpretation: Interpretation):
+        pass
