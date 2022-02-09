@@ -23,13 +23,13 @@ class DeepCream:
     def __get_img(self) -> np.ndarray:
         pass
 
-    def __save_img(self, img: np.ndarray, directory: str):
+    def __save_img(self, img: np.ndarray):
         pass
 
     def __load_img(self, directory):
         pass
 
-    def __get_mask(self, path: str) -> np.ndarray:
+    def __get_mask(self, img: np.ndarray) -> np.ndarray:
         """Gets the cloud mask from CloudFilter.
 
         Returns:
@@ -42,7 +42,7 @@ class DeepCream:
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
 
-        mask, _ = cloud_filter.evaluate_image(Image.open(path))
+        mask, _ = cloud_filter.evaluate_image(Image.fromarray(img, mode="RGB"))
         logging.debug('Evaluated image with CloudFilter')
 
         out = cv.resize(mask, (mask.shape[1], mask.shape[0]))
