@@ -1,18 +1,21 @@
+import os.path
+
 import cv2
 import numpy as np
-from numpy import asarray
-# from pycoral.utils import edgetpu
-
-from DeepCream.cloud_detection.unet_model import unet_model
-from DeepCream.constants import ABS_PATH
+from keras.models import load_model
+from matplotlib import pyplot as plt
+from pycoral.utils import edgetpu
 
 
 # TODO write test
-class CloudFilter:
+from DeepCream.constants import ABS_PATH
+
+
+class CloudDetection:
     def __init__(self,
                  blur=3, h_min=0, h_max=179, s_min=0, s_max=50, v_min=145,
                  v_max=255, contrast=1, brightness=0,
-                 weight_ai=0.7, binary_cloud_threshold=100, tpu_support=False):
+                 weight_ai=0.5, binary_cloud_threshold=100, tpu_support=False):
 
         """
 
@@ -88,20 +91,15 @@ class CloudFilter:
 
         if not tpu_support:
             self.interpreter = None
-            self.model = unet_model(self.HEIGHT, self.WIDTH, self.CHANNELS)
-            self.model.load_weights(
-                ABS_PATH + '/DeepCream/cloud_detection/models/'
-                           'keras').expect_partial()
-        # else:
-        #     self.model = None
-        #     self.interpreter = edgetpu.make_interpreter(
-        #         ABS_PATH
-        #         + "/DeepCream/cloud_detection/models/tflite/model.tflite")
-        #     self.interpreter.allocate_tensors()
-        #     self.input_details = self.interpreter.get_input_details()
-        #     self.output_details = self.interpreter.get_output_details()
+            self.model = load_model(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models/keras'))
+        else:
+            self.model = None
+            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'models/tflite/model.tflite'))
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
 
-    def __load_image(self, scaled):
+    def __load_image(self, image: np.ndarray):
 
         """
 
@@ -115,15 +113,11 @@ class CloudFilter:
 
         """
 
-        scaled.thumbnail((self.WIDTH, self.HEIGHT))
-        scaled = asarray(scaled)
-        scaled = scaled.astype('float32')
-        scaled /= 255.0
-        scaled = cv2.cvtColor(scaled, cv2.COLOR_BGR2RGB)
-
-        # TODO load this
-        normal = cv2.resize(cv2.imread(file_name), (self.WIDTH, self.HEIGHT),
+        normal = cv2.resize(image, (self.WIDTH, self.HEIGHT),
                             interpolation=cv2.INTER_AREA)
+
+        scaled = normal.astype('float32')
+        scaled /= 255.0
 
         return normal, scaled
 
@@ -214,7 +208,7 @@ class CloudFilter:
 
         return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
 
-    def evaluate_image(self, img) -> object:
+    def evaluate_image(self, image) -> object:
 
         """
 
@@ -224,11 +218,8 @@ class CloudFilter:
 
         """
 
-        # Check if the file has the correct format
-        # assert path.endswith('jpg')
-
         # Load the image
-        normal, scaled = self.__load_image(img)
+        normal, scaled = self.__load_image(image)
 
         # Check if the image actually loaded
         assert normal is not None and scaled is not None
@@ -237,6 +228,15 @@ class CloudFilter:
         ai_mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
                                                                 self.WIDTH)
         cv_mask = self.__cv_generate_image_mask(normal)
+
+        plt.figure(figsize=(12, 8))
+        plt.subplot(121)
+        plt.title('ai_mask')
+        plt.imshow(ai_mask)
+        plt.subplot(122)
+        plt.title('cv_mask')
+        plt.imshow(cv_mask)
+        plt.show()
 
         # Combine the two masks
         mask = cv2.addWeighted(ai_mask, self.weightAi, cv_mask,

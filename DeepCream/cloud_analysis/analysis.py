@@ -130,7 +130,7 @@ class Analysis:
                                             val_threshold)
             logging.info(f'Created {len(self.clouds)} clouds')
 
-    def __get_contours(self) -> list[np.ndarray]:
+    def __get_contours(self):
         """Gets the contours of the clouds.
 
         Returns:

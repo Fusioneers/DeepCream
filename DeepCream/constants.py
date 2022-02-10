@@ -11,9 +11,10 @@ LOGGING_FORMAT = '%(asctime)s: %(name)s: %(filename)s: %(funcName)s: ' \
 
 LOGGING_LEVEL = logging.DEBUG
 
-# TODO convert log path to dir
+LOG_DIR = os.path.normpath(os.path.join(
+    ABS_PATH, 'logs'))
 LOG_PATH = os.path.normpath(os.path.join(
-    ABS_PATH, f'logs/{datetime.today().strftime(TIME_FORMAT)}.log'))
+    LOG_DIR, f'{datetime.today().strftime(TIME_FORMAT)}.log'))
 
 DEFAULT_APPR_DIST = 3
 DEFAULT_STEP_LEN = 2

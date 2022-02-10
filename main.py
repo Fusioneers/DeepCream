@@ -1,8 +1,10 @@
-from DeepCream.deepcream import DeepCream
+import os.path
+
+import DeepCream
+from DeepCream.constants import ABS_PATH
 
 try:
-    dc = DeepCream("data/input", "data/output")
-    response_status = dc.start()
-    print(response_status)
+    deepcream = DeepCream.initialize(os.path.join(ABS_PATH, 'data/input'), os.path.join(ABS_PATH, 'data/output'))
+    deepcream.start()
 except BaseException as err:
     print(err)
