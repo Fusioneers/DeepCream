@@ -9,14 +9,13 @@ from DeepCream.cloud_detection.cloud_detection import CloudDetection
 
 
 class DeepCream:
-    def __init__(self, input_directory, output_directory):
-        self.input_directory = input_directory
-        self.output_directory = output_directory
+    def __init__(self, directory: str):
+        self.directory = directory
 
-        self.cloud_detection = CloudDetection()
+        self.cloud_detection = CloudDetection(tpu_support=True)
 
     def start(self):
-        image = self.__load_img('test.jpg')
+        image = self.__load_img('error.jpg')
         mask = self.__get_mask(image)
 
         plt.figure(figsize=(12, 8))
@@ -34,8 +33,9 @@ class DeepCream:
     def __save_img(self, img: np.ndarray):
         pass
 
-    def __load_img(self, image_name) -> np.ndarray:
-        return cv2.cvtColor(cv2.imread(os.path.join(self.input_directory, image_name)), cv2.COLOR_BGR2RGB)
+    def __load_img(self, image_name: str) -> np.ndarray:
+        # Returns an RGB (!) image
+        return cv2.cvtColor(cv2.imread(os.path.join(self.directory, image_name)), cv2.COLOR_BGR2RGB)
 
     def __get_mask(self, image):
         return self.cloud_detection.evaluate_image(image)

@@ -20,5 +20,5 @@ with open(LOG_PATH, 'w') as log:
     logging.info('Started DeepCream/__init__.py')
 
 
-def initialize(input_directory, output_directory):
-    return DeepCreamClass(input_directory, output_directory)
+def initialize(directory):
+    return DeepCreamClass(directory)

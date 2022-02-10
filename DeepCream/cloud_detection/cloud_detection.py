@@ -2,12 +2,13 @@ import os.path
 
 import cv2
 import numpy as np
-from keras.models import load_model
 from matplotlib import pyplot as plt
 from pycoral.utils import edgetpu
 
 
 # TODO write test
+from tensorflow.python.keras.models import load_model
+
 from DeepCream.constants import ABS_PATH
 
 
@@ -94,7 +95,8 @@ class CloudDetection:
             self.model = load_model(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models/keras'))
         else:
             self.model = None
-            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'models/tflite/model.tflite'))
+            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
+                                                                               '/tflite/model.tflite'))
             self.interpreter.allocate_tensors()
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
@@ -231,11 +233,11 @@ class CloudDetection:
 
         plt.figure(figsize=(12, 8))
         plt.subplot(121)
-        plt.title('ai_mask')
-        plt.imshow(ai_mask)
-        plt.subplot(122)
         plt.title('cv_mask')
         plt.imshow(cv_mask)
+        plt.subplot(122)
+        plt.title('ai_mask')
+        plt.imshow(ai_mask)
         plt.show()
 
         # Combine the two masks
