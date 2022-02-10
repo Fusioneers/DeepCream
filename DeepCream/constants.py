@@ -11,6 +11,7 @@ LOGGING_FORMAT = '%(asctime)s: %(name)s: %(filename)s: %(funcName)s: ' \
 
 LOGGING_LEVEL = logging.DEBUG
 
+# TODO convert log path to dir
 LOG_PATH = os.path.normpath(os.path.join(
     ABS_PATH, f'logs/{datetime.today().strftime(TIME_FORMAT)}.log'))
 

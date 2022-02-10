@@ -6,10 +6,10 @@ import numpy as np
 from PIL import Image
 import threading as th
 
-from cloud_detection.cloud_filter import CloudFilter
-from cloud_analysis.analysis import Analysis
-from database import DataBase
-from constants import ABS_PATH
+from DeepCream.cloud_detection.cloud_filter import CloudFilter
+from DeepCream.cloud_analysis.analysis import Analysis
+from DeepCream.database import DataBase
+from DeepCream.constants import ABS_PATH
 
 
 class DeepCream:
@@ -38,11 +38,11 @@ class DeepCream:
             estimated to be a cloud and a 0 otherwise. It has the same shape
             as orig, but only a single channel i.e. shape (height, width).
         """
-        
+
         cloud_filter = CloudFilter()
         logging.debug('Initialised CloudFilter')
 
-        mask, _ = cloud_filter.evaluate_image(Image.fromarray(img, mode="RGB"))
+        mask, _ = cloud_filter.evaluate_image(img))
         logging.debug('Evaluated image with CloudFilter')
 
         out = cv.resize(mask, (mask.shape[1], mask.shape[0]))
@@ -59,5 +59,5 @@ class DeepCream:
 
     def __save_results(self,
                        analysis_: Analysis,
-                       interpretation: Interpretation):
+                       interpretation):
         pass

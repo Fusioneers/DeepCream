@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from numpy import asarray
-from pycoral.utils import edgetpu
+# from pycoral.utils import edgetpu
 
 from DeepCream.cloud_detection.unet_model import unet_model
 from DeepCream.constants import ABS_PATH
@@ -92,14 +92,14 @@ class CloudFilter:
             self.model.load_weights(
                 ABS_PATH + '/DeepCream/cloud_detection/models/'
                            'keras').expect_partial()
-        else:
-            self.model = None
-            self.interpreter = edgetpu.make_interpreter(
-                ABS_PATH
-                + "/DeepCream/cloud_detection/models/tflite/model.tflite")
-            self.interpreter.allocate_tensors()
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
+        # else:
+        #     self.model = None
+        #     self.interpreter = edgetpu.make_interpreter(
+        #         ABS_PATH
+        #         + "/DeepCream/cloud_detection/models/tflite/model.tflite")
+        #     self.interpreter.allocate_tensors()
+        #     self.input_details = self.interpreter.get_input_details()
+        #     self.output_details = self.interpreter.get_output_details()
 
     def __load_image(self, scaled):
 
@@ -121,6 +121,7 @@ class CloudFilter:
         scaled /= 255.0
         scaled = cv2.cvtColor(scaled, cv2.COLOR_BGR2RGB)
 
+        # TODO load this
         normal = cv2.resize(cv2.imread(file_name), (self.WIDTH, self.HEIGHT),
                             interpolation=cv2.INTER_AREA)
 
