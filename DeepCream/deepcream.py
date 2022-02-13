@@ -35,7 +35,8 @@ class DeepCream:
 
     def __load_img(self, image_name: str) -> np.ndarray:
         # Returns an RGB (!) image
-        return cv2.cvtColor(cv2.imread(os.path.join(self.directory, image_name)), cv2.COLOR_BGR2RGB)
+        return cv2.cvtColor(cv2.imread(os.path.join(self.directory, image_name)
+                                       ), cv2.COLOR_BGR2RGB)
 
     def __get_mask(self, image):
         return self.cloud_detection.evaluate_image(image)

@@ -113,7 +113,7 @@ class Analysis:
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
 
-        self.mask = mask
+        self.mask = cv.resize(mask, (self.height, self.width))
         logging.info('Created mask')
         if not np.any(self.mask):
             self.contours = ()
@@ -225,8 +225,9 @@ class Analysis:
             for cloud in all_clouds:
                 if len(clouds) >= max_num_clouds:
                     break
-                if np.all(cloud.hull[:, 1] >= border_width):
-                    if np.all(cloud.hull[:, 1] <= cloud.height - border_width):
+                if np.all(np.array(cloud.hull)[:, 1] >= border_width):
+                    if np.all(np.array(cloud.hull)[:,
+                              1] <= cloud.height - border_width):
                         if check_valid(cloud):
                             clouds.append(cloud)
 
@@ -319,7 +320,7 @@ class Analysis:
 
             self.contour_perimeter = cv.arcLength(self.contour, True)
             self.contour_area = cv.contourArea(self.contour)
-            self.hull = cv.convexHull(self.contour)
+            self.hull = np.squeeze(np.array(cv.convexHull(self.contour)))
             self.hull_perimeter = cv.arcLength(self.hull, True)
             self.hull_area = cv.contourArea(self.hull)
 

@@ -28,7 +28,7 @@ Structure of the database:
                     orig creation time
                     created mask
                     created analysis
-                    created type
+                    created classification
                     is_compressed
                 orig.png or compressed.jpg
                 mask.png
@@ -50,11 +50,11 @@ Structure of the database:
                         std_b
                         transparency
                         mean_diff_edges
-                type.csv/
+                classification.csv/
                     1/ (cloud)
                         center_x
                         center_y
-                        type
+                        classification
 
     """
 
@@ -95,7 +95,7 @@ Structure of the database:
             'orig creation time': get_time(),
             'created mask': False,
             'created analysis': False,
-            'created type': False,
+            'created classification': False,
             'is_compressed': False,
         }
 
@@ -136,19 +136,21 @@ Structure of the database:
 
         logging.info('Saved analysis')
 
-    def save_type(self, type: pd.DataFrame, identifier: int):
-        logging.debug('Attempting to save type')
+    def save_classification(self, classification: pd.DataFrame,
+                            identifier: int):
+        logging.debug('Attempting to save classification')
         if identifier not in self.metadata['data']:
             logging.error('Identifier not in database')
             raise ValueError('Identifier not in database')
 
         self.metadata['data'][identifier][
-            'created type'] = get_time()
+            'created classification'] = get_time()
 
-        type.to_csv(os.path.join(self.__get_id_path(identifier), 'type.csv'))
+        classification.to_csv(
+            os.path.join(self.__get_id_path(identifier), 'classification.csv'))
         self.__update_metadata_file()
 
-        logging.info('Saved type')
+        logging.info('Saved classification')
 
     def load_orig_by_id(self, identifier: int) -> np.ndarray:
         if identifier not in self.metadata['data']:
@@ -229,33 +231,34 @@ Structure of the database:
         return pd.read_csv(
             os.path.join(self.data_dir, str(identifier), 'analysis.csv'))
 
-    def load_analysis_by_empty_type(self) -> tuple[pd.DataFrame, int]:
+    def load_analysis_by_empty_classification(self) \
+            -> tuple[pd.DataFrame, int]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created type'] and \
-                        self.metadata['data'][identifier]['created analysis']:
-                    identifier = img
-                    break
+                if not self.metadata['data'][img]['created classification']:
+                    if self.metadata['data'][identifier]['created analysis']:
+                        identifier = img
+                        break
 
         if not identifier:
-            logging.error('No not interpreted image in database')
-            raise LookupError('No not interpreted image in database')
+            logging.error('No not classified image in database')
+            raise LookupError('No not classified image in database')
 
         return (pd.read_csv(os.path.join(self.data_dir, str(identifier),
                                          'orig.png')), identifier)
 
-    def load_type_by_id(self, identifier: int) -> pd.DataFrame:
+    def load_classification_by_id(self, identifier: int) -> pd.DataFrame:
         if identifier not in self.metadata['data']:
             logging.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
-        if not self.metadata['data'][identifier]['created type']:
-            logging.error('Identifier does not contain an interpretation')
-            raise ValueError('Identifier does not contain an interpretation')
+        if not self.metadata['data'][identifier]['created classification']:
+            logging.error('Identifier does not contain an classification')
+            raise ValueError('Identifier does not contain an classification')
 
         return pd.read_csv(
-            os.path.join(self.data_dir, str(identifier), 'type.csv'))
+            os.path.join(self.data_dir, str(identifier), 'classification.csv'))
 
 
 if __name__ == '__main__':

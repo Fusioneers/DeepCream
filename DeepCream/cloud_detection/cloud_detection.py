@@ -3,7 +3,7 @@ import os.path
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-from pycoral.utils import edgetpu
+# from pycoral.utils import edgetpu
 
 
 # TODO write test
@@ -92,14 +92,15 @@ class CloudDetection:
 
         if not tpu_support:
             self.interpreter = None
-            self.model = load_model(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models/keras'))
-        else:
-            self.model = None
-            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
-                                                                               '/tflite/model.tflite'))
-            self.interpreter.allocate_tensors()
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
+            self.model = load_model(os.path.join(ABS_PATH,
+                                                 'DeepCream/cloud_detection/models/keras'))
+        # else:
+        #     self.model = None
+        #     self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
+        #                                                                        '/tflite/model.tflite'))
+        #     self.interpreter.allocate_tensors()
+        #     self.input_details = self.interpreter.get_input_details()
+        #     self.output_details = self.interpreter.get_output_details()
 
     def __load_image(self, image: np.ndarray):
 
@@ -210,7 +211,7 @@ class CloudDetection:
 
         return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
 
-    def evaluate_image(self, image) -> object:
+    def evaluate_image(self, image) -> np.ndarray:
 
         """
 

@@ -33,7 +33,8 @@ df = pd.DataFrame(columns=columns)
 
 for i, img in tqdm(enumerate(os.scandir(directory)), total=num_img):
     # TODO correct parameters
-    analysis = Analysis(cv.imread(img.path), num_clouds)
+    analysis = Analysis(cv.cvtColor(cv.imread(img.path), cv.COLOR_BGR2RGB),
+                        num_clouds)
 
     for j, cloud in enumerate(analysis.clouds):
         loc = num_clouds * i + j
