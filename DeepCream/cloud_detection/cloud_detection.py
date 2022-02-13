@@ -3,11 +3,9 @@ import os.path
 
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
-# from pycoral.utils import edgetpu
-
 
 # TODO write test
+from pycoral.utils import edgetpu
 from tensorflow.python.keras.models import load_model
 
 from DeepCream.constants import ABS_PATH
@@ -97,13 +95,13 @@ class CloudDetection:
             self.interpreter = None
             self.model = load_model(os.path.join(ABS_PATH,
                                                  'DeepCream/cloud_detection/models/keras'))
-        # else:
-        #     self.model = None
-        #     self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
-        #                                                                        '/tflite/model.tflite'))
-        #     self.interpreter.allocate_tensors()
-        #     self.input_details = self.interpreter.get_input_details()
-        #     self.output_details = self.interpreter.get_output_details()
+        else:
+            self.model = None
+            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
+                                                                               '/tflite/model.tflite'))
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
 
     def __load_image(self, image: np.ndarray):
 
@@ -236,15 +234,6 @@ class CloudDetection:
         ai_mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
                                                                 self.WIDTH)
         cv_mask = self.__cv_generate_image_mask(normal)
-        #
-        # plt.figure(figsize=(12, 8))
-        # plt.subplot(121)
-        # plt.title('cv_mask')
-        # plt.imshow(cv_mask)
-        # plt.subplot(122)
-        # plt.title('ai_mask')
-        # plt.imshow(ai_mask)
-        # plt.show()
 
         # Combine the two masks
         mask = cv2.addWeighted(ai_mask, self.weightAi, cv_mask,

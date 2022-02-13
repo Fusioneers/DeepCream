@@ -191,7 +191,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'orig.png')
 
-    def load_orig_by_empty_mask(self) -> tuple[np.ndarray, int]:
+    def load_orig_by_empty_mask(self) -> Tuple[np.ndarray, int]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -206,7 +206,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'orig.png'), identifier
 
-    def load_orig_by_empty_analysis(self) -> tuple[np.ndarray, str]:
+    def load_orig_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -232,7 +232,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'mask.png')
 
-    def load_mask_by_empty_analysis(self) -> tuple[np.ndarray, str]:
+    def load_mask_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -261,7 +261,7 @@ Structure of the database:
             os.path.join(self.data_dir, str(identifier), 'analysis.csv'))
 
     def load_analysis_by_empty_classification(self) \
-            -> tuple[pd.DataFrame, str]:
+            -> Tuple[pd.DataFrame, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)

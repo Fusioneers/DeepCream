@@ -20,7 +20,8 @@ class DeepCream:
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
         self.database = DataBase(os.path.join(ABS_PATH, 'database'))
 
-    def start(self):
+    def run(self, allowed_execution_time: int):
+        print(allowed_execution_time)
         for i in range(1, 11):
             image = self.__load_img('photo_' + str(i) + '.jpg')
             identifier = self.database.save_orig(image)
