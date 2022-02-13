@@ -21,7 +21,6 @@ properties such as convexity or transparency can be read off.
     print(f'Transparency: {analysis.clouds[0].transparency()}')
     cv.imshow(analysis.clouds[0].img)
 """
-
 import logging
 
 import cv2 as cv
@@ -32,7 +31,9 @@ from DeepCream.constants import (DEFAULT_STEP_LEN,
                                  DEFAULT_BORDER_WIDTH,
                                  DEFAULT_VAL_THRESHOLD)
 
-logging.info('Started DeepCream/cloud_analysis/analysis.py')
+logger = logging.getLogger('DeepCream.cloud_analysis.analysis')
+
+logger.info('Started DeepCream/cloud_analysis/analysis.py')
 
 
 class Analysis:
@@ -114,21 +115,21 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = cv.resize(mask, (self.height, self.width))
-        logging.info('Created mask')
+        logger.info('Created mask')
         if not np.any(self.mask):
             self.contours = ()
             self.clouds = []
-            logging.warning('Orig has no clouds')
+            logger.warning('Orig has no clouds')
         else:
             self.contours = self.__get_contours()
-            logging.info('Created contours')
+            logger.info('Created contours')
 
             self.clouds = self.__get_clouds(self.contours,
                                             max_num_clouds,
                                             max_border_proportion,
                                             border_width,
                                             val_threshold)
-            logging.info(f'Created {len(self.clouds)} clouds')
+            logger.info(f'Created {len(self.clouds)} clouds')
 
     def __get_contours(self):
         """Gets the contours of the clouds.
@@ -140,10 +141,10 @@ class Analysis:
 
         contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
                                       cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
-        logging.debug('Found contours with cv.findContours')
+        logger.debug('Found contours with cv.findContours')
 
         contours = [np.squeeze(contour) for contour in contours]
-        logging.debug('Reformatted contours')
+        logger.debug('Reformatted contours')
 
         return contours
 
@@ -193,7 +194,7 @@ class Analysis:
             cv.drawContours(mask, [contour], 0, (255, 255, 255), -1)
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             all_clouds.append(self.Cloud(self.orig, img, mask, contour))
-        logging.debug('Created list of all clouds')
+        logger.debug('Created list of all clouds')
 
         # TODO test this
         def check_valid(cloud):
@@ -210,11 +211,11 @@ class Analysis:
         if max_border_proportion == 1:
             if len(all_clouds) <= max_num_clouds:
                 clouds = all_clouds
-                logging.debug(
+                logger.debug(
                     'There are less or equal valid clouds than max_num_clouds')
             else:
                 clouds = all_clouds[:max_num_clouds]
-                logging.debug('Filtered clouds by size')
+                logger.debug('Filtered clouds by size')
         else:
             all_clouds = sorted(all_clouds,
                                 key=lambda cloud:
@@ -231,7 +232,7 @@ class Analysis:
                         if check_valid(cloud):
                             clouds.append(cloud)
 
-            logging.debug('Filtered clouds by visible area border')
+            logger.debug('Filtered clouds by visible area border')
 
         return clouds
 
@@ -472,7 +473,7 @@ class Analysis:
             valid_spans = np.array(valid_spans)
 
             if not valid_spans.size:
-                logging.info('The cloud has no valid spans')
+                logger.info('The cloud has no valid spans')
 
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]

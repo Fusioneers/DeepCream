@@ -1,7 +1,11 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
 from DeepCream.cloud_analysis.analysis import Analysis
+
+logger = logging.getLogger('DeepCream.cloud_analysis.classification')
 
 
 class Classification:

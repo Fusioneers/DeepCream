@@ -231,15 +231,15 @@ class CloudDetection:
         ai_mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
                                                                 self.WIDTH)
         cv_mask = self.__cv_generate_image_mask(normal)
-
-        plt.figure(figsize=(12, 8))
-        plt.subplot(121)
-        plt.title('cv_mask')
-        plt.imshow(cv_mask)
-        plt.subplot(122)
-        plt.title('ai_mask')
-        plt.imshow(ai_mask)
-        plt.show()
+        #
+        # plt.figure(figsize=(12, 8))
+        # plt.subplot(121)
+        # plt.title('cv_mask')
+        # plt.imshow(cv_mask)
+        # plt.subplot(122)
+        # plt.title('ai_mask')
+        # plt.imshow(ai_mask)
+        # plt.show()
 
         # Combine the two masks
         mask = cv2.addWeighted(ai_mask, self.weightAi, cv_mask,

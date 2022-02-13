@@ -1,7 +1,8 @@
+import logging
 import os.path
 
 import DeepCream
-from DeepCream.constants import ABS_PATH
+from DeepCream.constants import logger, ABS_PATH
 
 try:
     deepcream = DeepCream.initialize(os.path.join(ABS_PATH, 'data'))

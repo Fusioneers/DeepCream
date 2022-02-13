@@ -1,3 +1,4 @@
+import logging
 import os
 
 import cv2
@@ -6,6 +7,8 @@ from matplotlib import pyplot as plt
 
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
+
+logger = logging.getLogger('DeepCream.deepcream')
 
 
 class DeepCream:
