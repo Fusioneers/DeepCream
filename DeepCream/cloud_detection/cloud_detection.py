@@ -1,3 +1,4 @@
+import logging
 import os.path
 
 import cv2
@@ -10,6 +11,8 @@ from matplotlib import pyplot as plt
 from tensorflow.python.keras.models import load_model
 
 from DeepCream.constants import ABS_PATH
+
+logger = logging.getLogger('DeepCream.cloud_detection')
 
 
 class CloudDetection:
@@ -225,7 +228,9 @@ class CloudDetection:
         normal, scaled = self.__load_image(image)
 
         # Check if the image actually loaded
-        assert normal is not None and scaled is not None
+        if normal is None or scaled is None:
+            logger.error('Image was loaded empty')
+            raise ValueError('Image was loaded empty')
 
         # Compute the two masks
         ai_mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
