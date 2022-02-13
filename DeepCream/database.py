@@ -102,8 +102,11 @@ Structure of the database:
         img = cv.cvtColor(
             cv.imread(os.path.join(self.data_dir, identifier, name)),
             cv.COLOR_BGR2RGB)
-        if not img:
+        try:
+            img.size
+        except (ValueError, AttributeError):
             logger.error(f'Could not load {name}')
+        logging.info('Loaded img')
         return img
 
     def save_orig(self, orig: np.ndarray, is_compressed: bool = False) -> str:
