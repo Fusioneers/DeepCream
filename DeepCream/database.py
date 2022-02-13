@@ -108,6 +108,11 @@ Structure of the database:
 
     def save_orig(self, orig: np.ndarray, is_compressed: bool = False) -> str:
         logger.debug('Attempting to save orig')
+
+        if not orig.size:
+            logging.error('Orig is empty')
+            raise ValueError('Orig is empty')
+
         identifier = 1
         while str(identifier) in self.metadata['data']:
             identifier += 1
@@ -133,9 +138,10 @@ Structure of the database:
         return identifier
 
     def save_mask(self, mask: np.ndarray, identifier: str):
-        if not mask:
+        if not mask.size:
             logging.error('Mask is empty')
             raise ValueError('Mask is empty')
+
         if identifier not in self.metadata['data']:
             logger.error('Identifier not in database')
             raise ValueError('Identifier not in database')
