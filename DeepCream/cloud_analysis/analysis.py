@@ -115,12 +115,14 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = cv.resize(mask, (self.height, self.width))
-        logger.info('Created mask')
+        logger.debug('Resized mask')
+
         if not np.any(self.mask):
             self.contours = ()
             self.clouds = []
             logger.warning('Orig has no clouds')
         else:
+            
             self.contours = self.__get_contours()
             logger.info('Created contours')
 

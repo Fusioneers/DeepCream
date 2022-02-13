@@ -1,12 +1,13 @@
 import json
 import logging
 import os
+from typing import Tuple, Any
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import ABS_PATH, get_time
+from DeepCream.constants import DEFAULT_COMPRESSION_DIM, get_time
 
 logger = logging.getLogger('DeepCream.database')
 
@@ -71,6 +72,7 @@ Structure of the database:
                     self.metadata = json.load(metadata)
             except FileNotFoundError:
                 logger.error('Directory is not a DataBase')
+                raise ValueError('Directory is not a DataBase')
 
         else:
             os.mkdir(self.base_dir)
@@ -92,7 +94,20 @@ Structure of the database:
     def __get_id_path(self, identifier: str) -> str:
         return os.path.join(self.data_dir, identifier)
 
+    def __save_img(self, identifier: str, name: str, img: np.ndarray):
+        cv.imwrite(os.path.join(self.__get_id_path(identifier), name),
+                   cv.cvtColor(img, cv.COLOR_RGB2BGR))
+
+    def __load_img(self, identifier: str, name: str) -> np.ndarray:
+        img = cv.cvtColor(
+            cv.imread(os.path.join(self.data_dir, identifier, name)),
+            cv.COLOR_BGR2RGB)
+        if not img:
+            logger.error(f'Could not load {name}')
+        return img
+
     def save_orig(self, orig: np.ndarray, is_compressed: bool = False) -> str:
+        logger.debug('Attempting to save orig')
         identifier = 1
         while str(identifier) in self.metadata['data']:
             identifier += 1
@@ -107,32 +122,36 @@ Structure of the database:
             'is_compressed': is_compressed,
         }
 
-        # if is_compressed:
-        #     orig = cv.resize(orig, ())
-        cv.imwrite(
-            os.path.join(self.__get_id_path(identifier), 'orig.png'), orig)
+        if is_compressed:
+            orig = cv.resize(orig, DEFAULT_COMPRESSION_DIM)
+
         logger.info('Saved orig')
 
+        self.__save_img(identifier, 'orig.png', orig)
         self.__update_metadata_file()
 
         return identifier
 
     def save_mask(self, mask: np.ndarray, identifier: str):
-        logger.debug('Attempting to save mask')
+        if not mask:
+            logging.error('Mask is empty')
+            raise ValueError('Mask is empty')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not in database')
             raise ValueError('Identifier not in database')
 
         self.metadata['data'][identifier]['created mask'] = get_time()
 
-        cv.imwrite(
-            os.path.join(self.__get_id_path(identifier), 'mask.png'), mask)
+        self.__save_img(identifier, 'mask.png', mask)
         self.__update_metadata_file()
 
         logger.info('Saved mask')
 
     def save_analysis(self, analysis: pd.DataFrame, identifier: str):
-        logger.debug('Attempting to save analysis')
+        if analysis.empty:
+            logging.error('Analysis is empty')
+            raise ValueError('Analysis is empty')
+
         if identifier not in self.metadata['data']:
             logger.error('Identifier not in database')
             raise ValueError('Identifier not in database')
@@ -148,7 +167,10 @@ Structure of the database:
 
     def save_classification(self, classification: pd.DataFrame,
                             identifier: str):
-        logger.debug('Attempting to save classification')
+        if classification.empty:
+            logging.error('Classification is empty')
+            raise ValueError('Classification is empty')
+
         if identifier not in self.metadata['data']:
             logger.error('Identifier not in database')
             raise ValueError('Identifier not in database')
@@ -167,12 +189,12 @@ Structure of the database:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
-        return cv.imread(
-            os.path.join(self.data_dir, str(identifier), 'orig.png'))
+        return self.__load_img(identifier, 'orig.png')
 
-    def load_orig_by_empty_mask(self) -> tuple[np.ndarray, str]:
+    def load_orig_by_empty_mask(self) -> tuple[np.ndarray, int]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
+            img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created mask']:
                     identifier = img
@@ -181,14 +203,13 @@ Structure of the database:
         if not identifier:
             logger.error('No not masked image in database')
             raise LookupError('No not masked image in database')
-        print(os.path.join(self.data_dir, str(identifier),
-                           'orig.png'))
-        return (cv.imread(os.path.join(self.data_dir, str(identifier),
-                                       'orig.png')), identifier)
+
+        return self.__load_img(identifier, 'orig.png'), identifier
 
     def load_orig_by_empty_analysis(self) -> tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
+            img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created analysis']:
                     identifier = img
@@ -198,8 +219,7 @@ Structure of the database:
             logger.error('No not analysed image in database')
             raise LookupError('No not analysed image in database')
 
-        return (cv.imread(os.path.join(self.data_dir, str(identifier),
-                                       'orig.png')), identifier)
+        return self.__load_img(identifier, 'orig.png'), identifier
 
     def load_mask_by_id(self, identifier: str) -> np.ndarray:
         if identifier not in self.metadata['data']:
@@ -210,12 +230,12 @@ Structure of the database:
             logger.error('Identifier does not contain a mask')
             raise ValueError('Identifier does not contain a mask')
 
-        return cv.imread(
-            os.path.join(self.data_dir, str(identifier), 'mask.png'))
+        return self.__load_img(identifier, 'mask.png')
 
     def load_mask_by_empty_analysis(self) -> tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
+            img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created analysis'] and \
                         self.metadata['data'][identifier]['created mask']:
@@ -226,8 +246,7 @@ Structure of the database:
             logger.error('No not analysed image in database')
             raise LookupError('No not analysed image in database')
 
-        return (cv.imread(os.path.join(self.data_dir, str(identifier),
-                                       'mask.png')), identifier)
+        return self.__load_img(identifier, 'mask.png'), identifier
 
     def load_analysis_by_id(self, identifier: str) -> pd.DataFrame:
         if identifier not in self.metadata['data']:
@@ -245,6 +264,7 @@ Structure of the database:
             -> tuple[pd.DataFrame, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
+            img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created classification']:
                     if self.metadata['data'][identifier]['created analysis']:

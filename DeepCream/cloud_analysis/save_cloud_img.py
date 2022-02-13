@@ -13,7 +13,7 @@ from DeepCream.constants import ABS_PATH, DEFAULT_BORDER_WIDTH
 
 logger = logging.getLogger('DeepCream.save_cloud_img')
 input_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/input'))
-output_dir = os.path.join(ABS_PATH, 'database')
+output_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/database'))
 num_img = len(os.listdir(input_dir))
 
 cloud_detection = CloudDetection()
@@ -41,7 +41,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
         logger.info(f'Reading image {path.name}')
         img = cv.cvtColor(cv.imread(os.path.normpath(path.path)),
                           cv.COLOR_BGR2RGB)
-        identifier = database.save_orig(img)
+        identifier = database.save_orig(img, is_compressed=True)
         logger.info('Saved orig')
 
         mask = cloud_detection.evaluate_image(img)
