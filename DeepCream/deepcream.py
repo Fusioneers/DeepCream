@@ -7,28 +7,25 @@ from matplotlib import pyplot as plt
 
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
+from DeepCream.constants import ABS_PATH
+from DeepCream.database import DataBase
 
 logger = logging.getLogger('DeepCream.deepcream')
 
 
 class DeepCream:
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, tpu_support: bool):
         self.directory = directory
 
-        self.cloud_detection = CloudDetection(tpu_support=True)
+        self.cloud_detection = CloudDetection(tpu_support=tpu_support)
+        self.database = DataBase(os.path.join(ABS_PATH, 'database'))
 
     def start(self):
-        image = self.__load_img('error.jpg')
-        mask = self.__get_mask(image)
-
-        plt.figure(figsize=(12, 8))
-        plt.subplot(121)
-        plt.title('image')
-        plt.imshow(image)
-        plt.subplot(122)
-        plt.title('mask')
-        plt.imshow(mask)
-        plt.show()
+        for i in range(1, 11):
+            image = self.__load_img('photo_' + str(i) + '.jpg')
+            identifier = self.database.save_orig(image)
+            mask = self.__get_mask(image)
+            self.database.save_mask(mask, identifier)
 
     def __get_img(self) -> np.ndarray:
         pass

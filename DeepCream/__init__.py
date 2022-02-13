@@ -34,5 +34,5 @@ logger.addHandler(console_handler)
 logger.info('Initialised logger')
 
 
-def initialize(directory):
-    return DeepCreamClass(directory)
+def initialize(directory, tpu_support=False):
+    return DeepCreamClass(directory, tpu_support)
