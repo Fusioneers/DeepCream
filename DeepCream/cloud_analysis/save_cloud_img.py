@@ -5,6 +5,8 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
+import traceback
+
 from tqdm import tqdm
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
@@ -78,21 +80,14 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
         database.save_analysis(df, identifier)
         logger.info('Saved analysis')
 
-    except ValueError as err:
-        logger.error(err)
-    except TypeError as err:
-        logger.error(err)
-    except IndexError as err:
-        logger.error(err)
-    except FileExistsError as err:
-        logger.error(err)
-    except FileNotFoundError as err:
-        logger.error(err)
-    except ArithmeticError as err:
-        logger.error(err)
-    except NameError as err:
-        logger.error(err)
-    except LookupError as err:
-        logger.error(err)
-    except AssertionError as err:
-        logger.error(err)
+    except (ValueError,
+            TypeError,
+            IndexError,
+            FileExistsError,
+            FileNotFoundError,
+            ArithmeticError,
+            NameError,
+            LookupError,
+            AssertionError,
+            ) as err:
+        logger.error(err.with_traceback())
