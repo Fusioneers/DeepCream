@@ -1,19 +1,18 @@
 import json
 import logging
 import os
-from typing import Tuple, Any
+import traceback
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import DEFAULT_COMPRESSION_DIM, get_time
+from DeepCream.constants import get_time, QUALITY_THRESHOLD
 
 logger = logging.getLogger('DeepCream.database')
 
 
 # TODO docstrings
-# TODO tests
 class DataBase:
     """
     
@@ -109,6 +108,68 @@ Structure of the database:
         logging.info('Loaded img')
         return img
 
+    def __get_dir_size(self):
+        total = 0
+        with os.scandir(self.base_dir) as it:
+            for entry in it:
+                if entry.is_file():
+                    total += entry.stat().st_size
+                elif entry.is_dir():
+                    total += self.__get_dir_size(entry.path)
+        return total
+
+    def __get_quality(self, identifier: str) -> int:
+        return np.random.random()
+
+    def __delete_orig(self, identifier: str):
+        if self.metadata['data'][identifier]['created classification']:
+            try:
+                os.remove(
+                    os.path.join(self.__get_id_path(identifier), 'orig.jpg'))
+                self.metadata['data'][identifier]['is deleted'] = True
+                logger.debug(f'Deleted orig {identifier}')
+            except (OSError, ValueError) as err:
+                logger.error(traceback.format_exc())
+                raise err
+        else:
+            logger.error('Tried to delete image which was not yet classified')
+            raise ValueError(
+                'Tried to delete image which was not yet classified')
+
+    def __compress_orig(self, identifier: str):
+        if self.metadata['data'][identifier]['created classification']:
+            try:
+                png = os.path.join(self.__get_id_path(identifier), 'orig.png')
+                jpg = os.path.join(self.__get_id_path(identifier), 'orig.jpg')
+                os.rename(png, jpg)
+            except (OSError, ValueError) as err:
+                logger.error(traceback.format_exc())
+                raise err
+        else:
+            logger.error(
+                'Tried to compress image which was not yet classified')
+            raise ValueError(
+                'Tried to compress image which was not yet classified')
+
+    def __free_space(self):
+        logging.debug('Attempting to free up space')
+        not_deleted = [key for key, value in self.metadata['data'] if
+                       value['quality'] and not value['is deleted']]
+
+        identifiers = sorted(not_deleted,
+                             key=lambda x: self.metadata['data'][x]['quality'])
+
+        not_best_imgs = identifiers[int(len(identifiers) * QUALITY_THRESHOLD):]
+
+        not_compressed = list(filter(lambda x: self.metadata['data'][x][
+            'is compressed'], not_best_imgs))
+
+        if not_compressed:
+            self.__compress_orig(not_compressed[0])
+        else:
+            self.__delete_orig(not_best_imgs[0])
+        logging.info('Freed up space')
+
     def save_orig(self, orig: np.ndarray, is_compressed: bool = False) -> str:
         logger.debug('Attempting to save orig')
 
@@ -128,14 +189,13 @@ Structure of the database:
             'created analysis': False,
             'created classification': False,
             'is_compressed': is_compressed,
+            'is deleted': False,
+            'quality': None
         }
 
-        if is_compressed:
-            orig = cv.resize(orig, DEFAULT_COMPRESSION_DIM)
+        self.__save_img(identifier, 'orig.png', orig)
 
         logger.info('Saved orig')
-
-        self.__save_img(identifier, 'orig.png', orig)
         self.__update_metadata_file()
 
         return identifier
@@ -190,6 +250,9 @@ Structure of the database:
         classification.to_csv(
             os.path.join(self.__get_id_path(identifier), 'classification.csv'))
         self.__update_metadata_file()
+
+        self.metadata['data'][identifier]['quality'] = self.__get_quality(
+            identifier)
 
         logger.info('Saved classification')
 
