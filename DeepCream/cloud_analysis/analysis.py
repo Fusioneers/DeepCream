@@ -478,10 +478,6 @@ class Analysis:
                 logger.info('The cloud has no valid spans')
 
             edges = self.orig[valid_spans[:, :, 0], valid_spans[:, :, 1]]
-            edges = np.array([[self.orig[point[0], point[1]]
-                               for point in span]
-                              for span in valid_spans])
-
             return edges
 
         def diff_edges(self,
