@@ -11,11 +11,12 @@ from tqdm import tqdm
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
 from DeepCream.database import DataBase
-from DeepCream.constants import ABS_PATH, DEFAULT_BORDER_WIDTH
+from DeepCream.constants import ABS_PATH, DEFAULT_BORDER_WIDTH, get_time
 
 logger = logging.getLogger('DeepCream.save_cloud_img')
 input_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/input'))
-output_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/database'))
+output_dir = os.path.normpath(
+    os.path.join(ABS_PATH, f'data/test_database {get_time()}'))
 num_img = len(os.listdir(input_dir))
 
 cloud_detection = CloudDetection()
@@ -43,14 +44,19 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
         logger.info(f'Reading image {path.name}')
         img = cv.cvtColor(cv.imread(os.path.normpath(path.path)),
                           cv.COLOR_BGR2RGB)
-        identifier = database.save_orig(img, is_compressed=True)
-        logger.info('Saved orig')
+        if not img.size:
+            logger.error('Orig was loaded empty')
+        identifier = database.save_orig(img)
+        # logger.info('Saved orig')
 
         mask = cloud_detection.evaluate_image(img)
+        if not np.any(mask):
+            logger.warning('There are no clouds on this image')
+            break
         database.save_mask(mask, identifier)
-        logger.info('Saved mask')
+        # logger.info('Saved mask')
 
-        analysis = Analysis(img, mask, 5, 0.5)
+        analysis = Analysis(img, mask, 10, 1)
         df = pd.DataFrame(columns=columns)
 
         for j, cloud in enumerate(analysis.clouds):
@@ -78,7 +84,6 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
                 cloud.diff_edges(DEFAULT_BORDER_WIDTH, DEFAULT_BORDER_WIDTH))
 
         database.save_analysis(df, identifier)
-        logger.info('Saved analysis')
 
     except (ValueError,
             TypeError,
@@ -89,5 +94,6 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
             NameError,
             LookupError,
             AssertionError,
-            ) as err:
-        logger.error(err.with_traceback())
+            RecursionError,
+            ):
+        logger.error(traceback.format_exc())

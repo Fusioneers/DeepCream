@@ -122,9 +122,9 @@ class Analysis:
             self.clouds = []
             logger.warning('Orig has no clouds')
         else:
-            
+
             self.contours = self.__get_contours()
-            logger.info('Created contours')
+            logger.debug('Created contours')
 
             self.clouds = self.__get_clouds(self.contours,
                                             max_num_clouds,
