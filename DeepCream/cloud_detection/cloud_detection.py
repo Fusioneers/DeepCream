@@ -1,14 +1,10 @@
 import logging
 import os.path
-
 import cv2
 import numpy as np
-
-# TODO write test
 from matplotlib import pyplot as plt
 from pycoral.utils import edgetpu
 from tensorflow.python.keras.models import load_model
-
 from DeepCream.constants import ABS_PATH
 
 logger = logging.getLogger('DeepCream.cloud_detection')
