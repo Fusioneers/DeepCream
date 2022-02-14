@@ -2,6 +2,8 @@ import logging
 import os
 from datetime import datetime
 
+DEBUG_MODE = True
+
 ABS_PATH = os.path.dirname(os.path.normpath(os.path.dirname(__file__)))
 
 TIME_FORMAT = '%Y-%m-%d %H-%M-%S'
