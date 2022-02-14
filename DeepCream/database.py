@@ -9,7 +9,11 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import get_time, MAX_DATABASE_SIZE, QUALITY_THRESHOLD
+from DeepCream.constants import (DEBUG_MODE,
+                                 get_time,
+                                 MAX_DATABASE_SIZE,
+                                 QUALITY_THRESHOLD,
+                                 )
 
 logger = logging.getLogger('DeepCream.database')
 
@@ -233,6 +237,7 @@ class DataBase:
             'created mask': False,
             'created analysis': False,
             'created classification': False,
+            'created art': False,
             'compressed': False,
             'deleted': False,
             'quality': None
@@ -272,11 +277,12 @@ class DataBase:
             'created analysis'] = get_time()
 
         analysis.to_csv(self.__get_path(identifier, 'analysis.csv'))
-        self.__update_metadata()
 
-        # TODO this is just temporary for testing, remove for actual program!
-        self.metadata['data'][identifier]['quality'] = self.__get_quality(
-            identifier)
+        if DEBUG_MODE:
+            self.metadata['data'][identifier]['quality'] = self.__get_quality(
+                identifier)
+
+        self.__update_metadata()
 
         logger.info(f'Saved analysis to {identifier}')
 
@@ -294,14 +300,30 @@ class DataBase:
 
         classification.to_csv(
             self.__get_path(identifier, 'classification.csv'))
-        self.__update_metadata()
 
-        self.metadata['data'][identifier]['quality'] = self.__get_quality(
-            identifier)
+        self.__update_metadata()
 
         logger.info('Saved classification')
 
-    # TODO save art
+    def save_art(self, art: dict, identifier: str):
+        logger.debug(f'Attempting to save art to {identifier}')
+        if not len(art):
+            raise ValueError('Classification is empty')
+
+        if identifier not in self.metadata['data']:
+            raise ValueError('Identifier not in database')
+
+        self.metadata['data'][identifier][
+            'created art'] = get_time()
+
+        with open(self.__get_path(identifier, 'art.json'), 'w') as f:
+            f.write(json.dumps(art, indent=4))
+
+        self.metadata['data'][identifier]['quality'] = self.__get_quality(
+            identifier)
+        self.__update_metadata()
+
+        logger.info('Saved art')
 
     def load_orig_by_id(self, identifier: str) -> np.ndarray:
         logger.debug(f'Attempting to load orig to {identifier}')
@@ -378,6 +400,25 @@ class DataBase:
         logger.info(f'Loaded mask by empty analysis from {identifier}')
         return mask, identifier
 
+    def load_mask_by_empty_art(self) -> Tuple[np.ndarray, str]:
+        logger.debug('Attempting to load mask by empty art')
+        identifier = None
+        for img in range(1, len(self.metadata['data']) + 1):
+            img = str(img)
+            if img in self.metadata['data']:
+                if not self.metadata['data'][img]['created art'] and \
+                        self.metadata['data'][identifier]['created mask']:
+                    identifier = img
+                    break
+
+        if not identifier:
+            raise LookupError('No not artistically interpreted image in '
+                              'database')
+
+        mask = self.__load_img(identifier, 'mask.png')
+        logger.info(f'Loaded mask by empty art from {identifier}')
+        return mask, identifier
+
     def load_analysis_by_id(self, identifier: str) -> pd.DataFrame:
         logger.debug(f'Attempting to load analysis from {identifier}')
         if identifier not in self.metadata['data']:
@@ -426,3 +467,19 @@ class DataBase:
             self.__get_path(identifier, 'classification.csv'))
         logger.info(f'Loaded classification from {identifier}')
         return classification
+
+    def load_art_by_id(self, identifier: str) -> pd.DataFrame:
+        logger.debug(f'Attempting to load art from {identifier}')
+        if identifier not in self.metadata['data']:
+            logger.error('Identifier not available in database')
+            raise ValueError('Identifier not available in database')
+
+        if not self.metadata['data'][identifier]['created art']:
+            raise ValueError(
+                f'Identifier {identifier} does not contain an art')
+
+        with open(self.__get_path(identifier, 'art.json'), 'r') as art:
+            art = json.load(art)
+
+        logger.info(f'Loaded art from {identifier}')
+        return art

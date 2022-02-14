@@ -83,6 +83,8 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_analysis(df, identifier)
 
+        database.save_art({'test': 'abc'}, identifier)
+
     except (ValueError,
             TypeError,
             IndexError,
