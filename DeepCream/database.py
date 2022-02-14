@@ -3,12 +3,13 @@ import logging
 import os
 import sys
 import traceback
+from typing import Tuple
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import get_time, QUALITY_THRESHOLD, MAX_DATABASE_SIZE
+from DeepCream.constants import get_time, MAX_DATABASE_SIZE
 
 logger = logging.getLogger('DeepCream.database')
 
@@ -323,7 +324,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'orig.png')
 
-    def load_orig_by_empty_mask(self) -> tuple[np.ndarray, str]:
+    def load_orig_by_empty_mask(self) -> Tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -338,7 +339,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'orig.png'), identifier
 
-    def load_orig_by_empty_analysis(self) -> tuple[np.ndarray, str]:
+    def load_orig_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -364,7 +365,7 @@ Structure of the database:
 
         return self.__load_img(identifier, 'mask.png')
 
-    def load_mask_by_empty_analysis(self) -> tuple[np.ndarray, str]:
+    def load_mask_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -392,7 +393,7 @@ Structure of the database:
         return pd.read_csv(self.__get_path(identifier, 'analysis.csv'))
 
     def load_analysis_by_empty_classification(self) \
-            -> tuple[pd.DataFrame, str]:
+            -> Tuple[pd.DataFrame, str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
