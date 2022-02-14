@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 # TODO write test
+from matplotlib import pyplot as plt
 from pycoral.utils import edgetpu
 from tensorflow.python.keras.models import load_model
 
@@ -14,10 +15,7 @@ logger = logging.getLogger('DeepCream.cloud_detection')
 
 
 class CloudDetection:
-    def __init__(self,
-                 blur=3, h_min=0, h_max=179, s_min=0, s_max=50, v_min=145,
-                 v_max=255, contrast=1, brightness=0,
-                 weight_ai=0.5, binary_cloud_threshold=100, tpu_support=False):
+    def __init__(self, binary_cloud_threshold: float = 0.5, tpu_support: bool = False):
 
         """
 
@@ -25,42 +23,8 @@ class CloudDetection:
 
         Optional Args:
             binary_cloud_threshold:
-            The threshold (between 0 and 255) which determines if the pixel is
+            The threshold (between 0 and 1) which determines if the pixel is
             part of a cloud.
-
-            blur:
-            The blur cv2.blur uses in cv_generate_image_mask to adjust the
-            input image.
-
-            contrast:
-            The contrast cv2.convertScaleAbs uses in cv_generate_image_mask to
-            adjust the input image.
-
-            brightness:
-            The brightness cv2.convertScaleAbs uses in cv_generate_image_mask
-            to adjust the input image.
-
-            h_min:
-            The minimum hue for a pixel to be considered a cloud.
-
-            h_max:
-            The maximum hue for a pixel to be considered a cloud.
-
-            s_min:
-            The minimum saturation for a pixel to be considered a cloud.
-
-            s_max:
-            The maximum saturation for a pixel to be considered a cloud.
-
-            v_min:
-            The minimum value for a pixel to be considered a cloud.
-
-            v_max:
-            The maximum value for a pixel to be considered a cloud.
-
-            weight_ai:
-            The importance of the AI prediction (from 0 to 1), the higher the
-            value the more importance.
 
             tpu_support:
             Whether the systems support a tpu (False by default).
@@ -68,23 +32,6 @@ class CloudDetection:
 
         # Set thresholds for cloud detection
         self.binaryCloudThreshold = binary_cloud_threshold
-
-        # Set the contrast, brightness and blur which should be applied to the
-        # image
-        self.contrast = contrast
-        self.brightness = brightness
-        self.blur = blur
-
-        # Set the min/max Hue, Saturation and Value for the image filtering
-        self.hMin = h_min
-        self.hMax = h_max
-        self.sMin = s_min
-        self.sMax = s_max
-        self.vMin = v_min
-        self.vMax = v_max
-
-        # The weight of the AI prediction
-        self.weightAi = weight_ai
 
         # Load the machine learning model
         self.HEIGHT = 192
@@ -123,7 +70,7 @@ class CloudDetection:
         scaled = normal.astype('float32')
         scaled /= 255.0
 
-        return normal, scaled
+        return scaled
 
     def __ai_generate_image_mask(self, image):
 
@@ -160,58 +107,6 @@ class CloudDetection:
         else:
             raise ValueError('No AI was configured')
 
-    def __cv_generate_image_mask(self, image):
-
-        """
-
-        Args:
-            image:
-            The cloud image in rgb format.
-
-        Returns:
-            The cloud mask (calculated by OpenCV) in grayscale format.
-
-        """
-
-        # Blur the image
-        if self.blur > 1:
-            blurred = cv2.blur(image, (self.blur, self.blur))
-        else:
-            blurred = image
-
-        # Adjust contrast and brightness
-        adjusted = cv2.convertScaleAbs(blurred, alpha=self.contrast,
-                                       beta=self.brightness)
-
-        # Set lower and upper boundaries to filter out
-        lower = np.array([self.hMin, self.sMin, self.vMin])
-        upper = np.array([self.hMax, self.sMax, self.vMax])
-
-        # Create the image mask to filter out everything but the clouds
-        hsv = cv2.cvtColor(adjusted, cv2.COLOR_BGR2HSV)
-        rough_mask = cv2.inRange(hsv, lower, upper)
-        hsv = cv2.bitwise_and(hsv, hsv, mask=rough_mask)
-
-        # Create an empty mask with the right dimensions
-        fine_mask = np.zeros(hsv.shape, hsv.dtype)
-
-        # Calculate for each pixel how likely it is to be a cloud and five it
-        # back as a mask
-        for y in range(hsv.shape[0]):
-            for x in range(hsv.shape[1]):
-                # TODO RuntimeWarning: overflow encountered in ubyte_scalars ??
-                hue = (hsv[y, x, 0] > 0) * np.clip(
-                    255 - (hsv[:, :, 0].max() - hsv[y, x, 2]), 0, 255)
-
-                saturation = (hsv[y, x, 1] > 0) * np.clip(255 - (hsv[y, x, 1]),
-                                                          0, 255)
-
-                value = np.clip(255 + hsv[y, x, 2] - self.vMax, 0, 255)
-
-                fine_mask[y, x] = [hue, saturation, value]
-
-        return cv2.cvtColor(fine_mask, cv2.COLOR_BGR2GRAY)
-
     def evaluate_image(self, image) -> np.ndarray:
 
         """
@@ -223,26 +118,28 @@ class CloudDetection:
         """
 
         # Load the image
-        normal, scaled = self.__load_image(image)
+        scaled = self.__load_image(image)
 
         # Check if the image actually loaded
-        if normal is None or scaled is None:
-            logger.error('Image was loaded empty')
-            raise ValueError('Image was loaded empty')
+        if scaled is None:
+            logger.error('Image was not loaded properly')
+            raise ValueError('Image was not loaded properly')
 
-        # Compute the two masks
-        ai_mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
-                                                                self.WIDTH)
-        cv_mask = self.__cv_generate_image_mask(normal)
+        # Compute the mask
+        mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
+                                                             self.WIDTH)
 
-        # Combine the two masks
-        mask = cv2.addWeighted(ai_mask, self.weightAi, cv_mask,
-                               (1 - self.weightAi), 0.0)
+        # Make the result binary
+        _, mask = cv2.threshold(mask, self.binaryCloudThreshold*255, 255, cv2.THRESH_BINARY)
 
-        # Normalize the resulting maks then make it binary
-        mask = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-        ret, mask = cv2.threshold(mask, self.binaryCloudThreshold, 255,
-                                  cv2.THRESH_BINARY)
+        plt.figure(figsize=(12, 8))
+        plt.subplot(121)
+        plt.title('orig')
+        plt.imshow(scaled)
+        plt.subplot(122)
+        plt.title('mask')
+        plt.imshow(mask)
+        plt.show()
 
         # Apply the mask to filter out everything but the clouds
         # multi_color_output = cv2.bitwise_and(normal, normal, mask=mask)

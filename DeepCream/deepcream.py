@@ -1,9 +1,10 @@
 import logging
 import os
+import random
+import time
 
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
@@ -22,25 +23,31 @@ class DeepCream:
 
     def run(self, allowed_execution_time: int):
         print(allowed_execution_time)
-        for i in range(1, 11):
-            image = self.__load_img('photo_' + str(i) + '.jpg')
-            identifier = self.database.save_orig(image)
-            mask = self.__get_mask(image)
-            self.database.save_mask(mask, identifier)
 
-    def __get_img(self) -> np.ndarray:
-        pass
+        start_time = time.time()
 
-    def __save_img(self, img: np.ndarray):
-        pass
+        while int(time.time() - start_time) < allowed_execution_time:
+            image = self.__take_photo()
+            identifier = self.__save_img(image)
+            mask = self.__generate_mask(image)
+            self.__save_mask(mask, identifier)
 
-    def __load_img(self, image_name: str) -> np.ndarray:
-        # Returns an RGB (!) image
-        return cv2.cvtColor(cv2.imread(os.path.join(self.directory, image_name)
-                                       ), cv2.COLOR_BGR2RGB)
+    def __take_photo(self) -> np.ndarray:
+        logger.info('Take photo')
+        # Returns a random (RGB) image (placeholder until real camera)
+        random_file_name = random.choice(os.listdir(self.directory))
+        return cv2.cvtColor(cv2.imread(os.path.join(self.directory, random_file_name)), cv2.COLOR_BGR2RGB)
 
-    def __get_mask(self, image):
+    def __save_img(self, image: np.ndarray) -> int:
+        return self.database.save_orig(image)
+
+    def __generate_mask(self, image):
+        logger.info('Generate mask')
         return self.cloud_detection.evaluate_image(image)
+
+    def __save_mask(self, mask: np.ndarray, identifier: int) -> int:
+        logger.info('Save mask for image ' + str(identifier))
+        return self.database.save_mask(mask, identifier)
 
     def __get_analysis(self, image: np.ndarray,
                        mask: np.ndarray) -> Analysis:
@@ -53,3 +60,6 @@ class DeepCream:
                        analysis_: Analysis,
                        interpretation):
         pass
+
+    def __load_img(self, identifier: int) -> np.ndarray:
+        self.database.load_orig_by_id(identifier)

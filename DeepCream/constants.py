@@ -12,7 +12,7 @@ FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(funcName)s: ' \
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '
 
-FILE_LOGGING_LEVEL = logging.DEBUG
+FILE_LOGGING_LEVEL = logging.INFO
 CONSOLE_LOGGING_LEVEL = logging.WARNING
 
 LOG_DIR = os.path.normpath(os.path.join(
