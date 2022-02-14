@@ -47,14 +47,12 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
         if not img.size:
             logger.error('Orig was loaded empty')
         identifier = database.save_orig(img)
-        # logger.info('Saved orig')
 
         mask = cloud_detection.evaluate_image(img)
         if not np.any(mask):
             logger.warning('There are no clouds on this image')
             break
         database.save_mask(mask, identifier)
-        # logger.info('Saved mask')
 
         analysis = Analysis(img, mask, 10, 1)
         df = pd.DataFrame(columns=columns)

@@ -477,6 +477,7 @@ class Analysis:
             if not valid_spans.size:
                 logger.info('The cloud has no valid spans')
 
+            edges = self.orig[valid_spans[:, :, 0], valid_spans[:, :, 1]]
             edges = np.array([[self.orig[point[0], point[1]]
                                for point in span]
                               for span in valid_spans])

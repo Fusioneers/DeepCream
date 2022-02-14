@@ -9,7 +9,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import get_time, MAX_DATABASE_SIZE
+from DeepCream.constants import get_time, MAX_DATABASE_SIZE, QUALITY_THRESHOLD
 
 logger = logging.getLogger('DeepCream.database')
 
@@ -18,52 +18,6 @@ logger.info('Initialised database')
 
 # TODO docstrings
 class DataBase:
-    """
-    
-Structure of the database:
-
-    base/
-        metadata.json/
-            creation time
-            folder structure/
-                this text
-        data/
-            1/
-                metadata.json/
-                    orig creation time
-                    created mask
-                    created analysis
-                    created classification
-                    compressed
-                orig.png or compressed.jpg
-                mask.png
-                analysis.csv/
-                    1/ (cloud)
-                        center_x
-                        center_y
-                        contour_perimeter
-                        contour_area
-                        hull_perimeter
-                        hull_area
-                        rectangularity
-                        elongation
-                        mean_r
-                        mean_g
-                        mean_b
-                        std_r
-                        std_g
-                        std_b
-                        transparency
-                        mean_diff_edges
-                classification.csv/
-                    1/ (cloud)
-                        center_x
-                        center_y
-                        type1
-                        type2
-                        ...
-
-    """
 
     def __init__(self, directory):
         self.base_dir = directory
@@ -85,7 +39,10 @@ Structure of the database:
             self.metadata = {
                 'metadata': {
                     'creation time': get_time(),
-                    'size': 0
+                    'size': 0,
+                    'num images': 0,
+                    'num compressed images': 0,
+                    'num deleted images': 0,
                 },
                 'data': {},
             }
@@ -118,8 +75,8 @@ Structure of the database:
         try:
             img.size
         except (ValueError, AttributeError):
-            logger.error(f'Could not load {name}')
-        logger.info('Loaded img')
+            logger.error(f'Could not load {name} from image {identifier}')
+        logger.debug(f'Loaded {name} from image {identifier}')
         return img
 
     def __get_size(self) -> int:
@@ -137,7 +94,7 @@ Structure of the database:
         return np.random.random()
 
     def __compress_orig(self, identifier: str):
-        logger.debug('Attempting to compress orig')
+        logger.debug(f'Attempting to compress image {identifier}')
         if self.metadata['data'][identifier]['quality']:
             try:
                 orig = self.__load_img(identifier, 'orig.png')
@@ -145,32 +102,52 @@ Structure of the database:
                 self.__save_img(identifier, 'orig.jpg', orig)
 
                 self.metadata['data'][identifier]['compressed'] = get_time()
+                self.metadata['metadata']['num compressed images'] += 1
                 self.__update_metadata()
-                logger.debug(f'Compressed orig {identifier}')
+                logger.debug(f'Compressed image {identifier}')
             except (OSError, ValueError) as err:
                 logger.error(traceback.format_exc())
                 raise err
         else:
-            logger.error(
-                'Tried to compress image which was not yet classified')
-            raise ValueError(
-                'Tried to compress image which was not yet classified')
+            logger.error(f'Tried to compress image {identifier} which has no '
+                         f'quality')
+            raise ValueError(f'Tried to compress image {identifier} which has '
+                             f'no quality')
 
     def __delete_orig(self, identifier: str):
-        logger.debug('Attempting to compress orig')
-        if self.metadata['data'][identifier]['quality']:
-            try:
-                os.remove(self.__get_path(identifier, 'orig.jpg'))
-                self.metadata['data'][identifier]['deleted'] = get_time()
-                self.__update_metadata()
-                logger.debug(f'Deleted orig {identifier}')
-            except (OSError, ValueError) as err:
-                logger.error(traceback.format_exc())
-                raise err
+        logger.debug(f'Attempting to delete orig {identifier}')
+        if self.__get_param(identifier, 'quality'):
+            if self.__get_param(identifier, 'compressed'):
+                try:
+                    os.remove(self.__get_path(identifier, 'orig.jpg'))
+                    self.metadata['data'][identifier]['deleted'] = get_time()
+                    self.metadata['metadata']['num deleted images'] += 1
+                    self.metadata['metadata']['num compressed images'] -= 1
+                    self.__update_metadata()
+                    logger.debug(f'Deleted orig {identifier}')
+                except FileNotFoundError:
+                    logger.error(traceback.format_exc())
+                    if os.path.exists(self.__get_path(identifier, 'orig.png')):
+                        logger.error(
+                            f'Tried to delete image {identifier} which is not '
+                            f'compressed')
+                        logger.info(
+                            f'Attempting to compress image {identifier}')
+                        self.__compress_orig(identifier)
+                    else:
+                        logger.error(
+                            f'Tried to delete image {identifier} which '
+                            f'was already deleted')
+            else:
+                logger.warning(f'Tried to delete image {identifier} which is '
+                               f'not compressed, attempting to compress image '
+                               f'{identifier}')
+                self.__compress_orig(identifier)
         else:
-            logger.error('Tried to delete image which was not yet classified')
-            raise ValueError(
-                'Tried to delete image which was not yet classified')
+            logger.error(f'Tried to delete image {identifier} '
+                         f'which has no quality')
+            raise ValueError(f'Tried to delete image {identifier} '
+                             f'which has no quality')
 
     def __free_space(self):
         logger.debug('Attempting to free up space')
@@ -179,34 +156,38 @@ Structure of the database:
 
         # TODO this case
         if not not_deleted:
-            logging.error(
+            logger.critical(
                 'There are no evaluated and not yet deleted images available')
             raise MemoryError(
                 'There are no evaluated and not yet deleted images available')
-
-        # TODO implement quality_threshold
-        # TODO maybe warning when deleting/compressing for the first time
 
         not_compressed = list(
             filter(lambda x: not self.__get_param(x, 'compressed'),
                    not_deleted))
 
-        if not_compressed:
+        num_not_compressed = len(not_compressed)
+        num_not_deleted = len(self.metadata['data']) \
+                          - self.metadata['metadata']['num deleted images']
+
+        if not_compressed and \
+                num_not_compressed / num_not_deleted > QUALITY_THRESHOLD:
             qualities = list(map(lambda x: self.__get_param(x, 'quality'),
                                  not_compressed))
             worst_img_idx = np.argmin(np.array(qualities))
             worst_img = not_compressed[worst_img_idx]
 
             self.__compress_orig(worst_img)
-            logger.info(f'Compressed orig {worst_img}')
         else:
+            compressed = list(
+                filter(lambda x: self.__get_param(x, 'compressed'),
+                       not_deleted))
+
             qualities = list(map(lambda x: self.__get_param(x, 'quality'),
-                                 not_deleted))
+                                 compressed))
             worst_img_idx = np.argmin(np.array(qualities))
             worst_img = not_deleted[worst_img_idx]
 
             self.__delete_orig(worst_img)
-            logger.debug(f'Deleted orig {worst_img}')
 
         self.__update_metadata()
 
@@ -219,26 +200,32 @@ Structure of the database:
 
         if self.metadata['metadata']['size'] \
                 + orig_png_size >= MAX_DATABASE_SIZE:
-            logger.debug('Attempting to free up space')
+            if self.metadata['metadata']['num compressed images'] \
+                    or self.metadata['metadata']['num deleted images']:
+                logger.debug('Attempting to free up space')
+            else:
+                logger.warning(
+                    'The database is too large, attempting to free space')
             logger.debug(f'Database size: {self.metadata["metadata"]["size"]}')
+
             while self.metadata['metadata']['size'] \
                     + orig_png_size >= MAX_DATABASE_SIZE:
                 self.__free_space()
             logger.info('Freed up space')
 
     def save_orig(self, orig: np.ndarray) -> str:
-        logger.debug('Attempting to save orig')
-
-        if not orig.size:
-            logger.error('Orig is empty')
-            raise ValueError('Orig is empty')
-
-        self.__check_space(orig)
-
         identifier = 1
         while str(identifier) in self.metadata['data']:
             identifier += 1
         identifier = str(identifier)
+
+        logger.debug(f'Attempting to save orig to {identifier}')
+
+        if not orig.size:
+            logger.error(f'Orig {identifier} is empty')
+            raise ValueError(f'Orig {identifier} is empty')
+
+        self.__check_space(orig)
 
         os.mkdir(self.__get_id_path(identifier))
         self.metadata['data'][identifier] = {
@@ -250,38 +237,36 @@ Structure of the database:
             'deleted': False,
             'quality': None
         }
+        self.metadata['metadata']['num images'] += 1
+        self.__update_metadata()
 
         self.__save_img(identifier, 'orig.png', orig)
-
-        logger.info('Saved orig')
-        self.__update_metadata()
+        logger.info(f'Saved orig to {identifier}')
 
         return identifier
 
     def save_mask(self, mask: np.ndarray, identifier: str):
+        logger.debug(f'Attempting to save mask to {identifier}')
         if not mask.size:
-            logger.error('Mask is empty')
-            raise ValueError('Mask is empty')
+            raise ValueError(f'Mask in {identifier} is empty')
 
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not in database')
-            raise ValueError('Identifier not in database')
+            raise ValueError(f'Identifier {identifier} is not in database')
 
         self.metadata['data'][identifier]['created mask'] = get_time()
 
         self.__save_img(identifier, 'mask.png', mask)
         self.__update_metadata()
 
-        logger.info('Saved mask')
+        logger.info(f'Saved mask to {identifier}')
 
     def save_analysis(self, analysis: pd.DataFrame, identifier: str):
+        logger.debug(f'Attempting to save analysis to {identifier}')
         if analysis.empty:
-            logger.error('Analysis is empty')
-            raise ValueError('Analysis is empty')
+            raise ValueError(f'Analysis in {identifier} is empty')
 
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not in database')
-            raise ValueError('Identifier not in database')
+            raise ValueError(f'Identifier {identifier} is not in database')
 
         self.metadata['data'][identifier][
             'created analysis'] = get_time()
@@ -293,16 +278,15 @@ Structure of the database:
         self.metadata['data'][identifier]['quality'] = self.__get_quality(
             identifier)
 
-        logger.info('Saved analysis')
+        logger.info(f'Saved analysis to {identifier}')
 
     def save_classification(self, classification: pd.DataFrame,
                             identifier: str):
+        logger.debug(f'Attempting to save classification to {identifier}')
         if classification.empty:
-            logger.error('Classification is empty')
             raise ValueError('Classification is empty')
 
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not in database')
             raise ValueError('Identifier not in database')
 
         self.metadata['data'][identifier][
@@ -317,14 +301,20 @@ Structure of the database:
 
         logger.info('Saved classification')
 
-    def load_orig_by_id(self, identifier: str) -> np.ndarray:
-        if identifier not in self.metadata['data']:
-            logger.error('Identifier not available in database')
-            raise ValueError('Identifier not available in database')
+    # TODO save art
 
-        return self.__load_img(identifier, 'orig.png')
+    def load_orig_by_id(self, identifier: str) -> np.ndarray:
+        logger.debug(f'Attempting to load orig to {identifier}')
+        if identifier not in self.metadata['data']:
+            raise ValueError(
+                f'Identifier {identifier} not available in database')
+
+        orig = self.__load_img(identifier, 'orig.png')
+        logger.info(f'Loaded orig from {identifier}')
+        return orig
 
     def load_orig_by_empty_mask(self) -> Tuple[np.ndarray, str]:
+        logger.debug('Attempting to load orig by empty mask')
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -334,12 +324,14 @@ Structure of the database:
                     break
 
         if not identifier:
-            logger.error('No not masked image in database')
             raise LookupError('No not masked image in database')
 
-        return self.__load_img(identifier, 'orig.png'), identifier
+        orig = self.__load_img(identifier, 'orig.png')
+        logger.info(f'Loaded orig by empty mask from {identifier}')
+        return orig, identifier
 
     def load_orig_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
+        logger.debug('Attempting to load orig by empty analysis')
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -349,23 +341,27 @@ Structure of the database:
                     break
 
         if not identifier:
-            logger.error('No not analysed image in database')
             raise LookupError('No not analysed image in database')
 
-        return self.__load_img(identifier, 'orig.png'), identifier
+        orig = self.__load_img(identifier, 'orig.png')
+        logger.info(f'Loaded orig by empty analysis from {identifier}')
+        return orig, identifier
 
     def load_mask_by_id(self, identifier: str) -> np.ndarray:
+        logger.debug(f'Attempting to load mask from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created mask']:
-            logger.error('Identifier does not contain a mask')
             raise ValueError('Identifier does not contain a mask')
 
-        return self.__load_img(identifier, 'mask.png')
+        mask = self.__load_img(identifier, 'mask.png')
+        logger.info(f'Loaded mask from {identifier}')
+        return mask
 
     def load_mask_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
+        logger.debug('Attempting to load mask by empty analysis')
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -376,24 +372,29 @@ Structure of the database:
                     break
 
         if not identifier:
-            logger.error('No not analysed image in database')
             raise LookupError('No not analysed image in database')
 
-        return self.__load_img(identifier, 'mask.png'), identifier
+        mask = self.__load_img(identifier, 'mask.png')
+        logger.info(f'Loaded mask by empty analysis from {identifier}')
+        return mask, identifier
 
     def load_analysis_by_id(self, identifier: str) -> pd.DataFrame:
+        logger.debug(f'Attempting to load analysis from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created analysis']:
-            logger.error('Identifier does not contain an analysis')
-            raise ValueError('Identifier does not contain an analysis')
+            raise ValueError(
+                f'Identifier {identifier} does not contain an analysis')
 
-        return pd.read_csv(self.__get_path(identifier, 'analysis.csv'))
+        analysis = pd.read_csv(self.__get_path(identifier, 'analysis.csv'))
+        logger.info(f'Loaded analysis from {identifier}')
+        return analysis
 
     def load_analysis_by_empty_classification(self) \
             -> Tuple[pd.DataFrame, str]:
+        logger.debug('Attempting to load analysis by empty classification')
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -404,19 +405,24 @@ Structure of the database:
                         break
 
         if not identifier:
-            logger.error('No not classified image in database')
             raise LookupError('No not classified image in database')
 
-        return (
-            pd.read_csv(self.__get_path(identifier, 'orig.png')), identifier)
+        analysis = pd.read_csv(self.__get_path(identifier, 'orig.png'))
+        logger.info(
+            f'Loaded analysis by empty classification from {identifier}')
+        return analysis, identifier
 
     def load_classification_by_id(self, identifier: str) -> pd.DataFrame:
+        logger.debug(f'Attempting to load classification from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created classification']:
-            logger.error('Identifier does not contain an classification')
-            raise ValueError('Identifier does not contain an classification')
+            raise ValueError(
+                f'Identifier {identifier} does not contain an classification')
 
-        return pd.read_csv(self.__get_path(identifier, 'classification.csv'))
+        classification = pd.read_csv(
+            self.__get_path(identifier, 'classification.csv'))
+        logger.info(f'Loaded classification from {identifier}')
+        return classification

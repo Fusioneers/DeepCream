@@ -2,16 +2,18 @@ import logging
 import os.path
 import cv2
 import numpy as np
+from keras.models import load_model
 from matplotlib import pyplot as plt
-from pycoral.utils import edgetpu
-from tensorflow.python.keras.models import load_model
+# from pycoral.utils import edgetpu
+# from tensorflow.python.keras.models import load_model
 from DeepCream.constants import ABS_PATH
 
 logger = logging.getLogger('DeepCream.cloud_detection')
 
 
 class CloudDetection:
-    def __init__(self, binary_cloud_threshold: float = 0.5, tpu_support: bool = False):
+    def __init__(self, binary_cloud_threshold: float = 0.5,
+                 tpu_support: bool = False):
 
         """
 
@@ -38,13 +40,14 @@ class CloudDetection:
             self.interpreter = None
             self.model = load_model(os.path.join(ABS_PATH,
                                                  'DeepCream/cloud_detection/models/keras'))
-        else:
-            self.model = None
-            self.interpreter = edgetpu.make_interpreter(os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
-                                                                               '/tflite/model.tflite'))
-            self.interpreter.allocate_tensors()
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
+        # else:
+        # self.model = None
+        # self.interpreter = edgetpu.make_interpreter(
+        #     os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
+        #                            '/tflite/model.tflite'))
+        # self.interpreter.allocate_tensors()
+        # self.input_details = self.interpreter.get_input_details()
+        # self.output_details = self.interpreter.get_output_details()
 
     def __load_image(self, image: np.ndarray):
 
@@ -126,16 +129,17 @@ class CloudDetection:
                                                              self.WIDTH)
 
         # Make the result binary
-        _, mask = cv2.threshold(mask, self.binaryCloudThreshold*255, 255, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(mask, self.binaryCloudThreshold * 255, 255,
+                                cv2.THRESH_BINARY)
 
-        plt.figure(figsize=(12, 8))
-        plt.subplot(121)
-        plt.title('orig')
-        plt.imshow(scaled)
-        plt.subplot(122)
-        plt.title('mask')
-        plt.imshow(mask)
-        plt.show()
+        # plt.figure(figsize=(12, 8))
+        # plt.subplot(121)
+        # plt.title('orig')
+        # plt.imshow(scaled)
+        # plt.subplot(122)
+        # plt.title('mask')
+        # plt.imshow(mask)
+        # plt.show()
 
         # Apply the mask to filter out everything but the clouds
         # multi_color_output = cv2.bitwise_and(normal, normal, mask=mask)
