@@ -363,8 +363,10 @@ class Analysis:
 
         def mean(self) -> list:
             """Gets the mean of each channel inside the cloud"""
-
-            return cv.mean(self.img, mask=self.mask)
+            mean = cv.mean(self.img, mask=self.mask)
+            if any(mean == 0):
+                raise ValueError('Cloud is too dark')
+            return mean
 
         def std(self) -> tuple:
             """Gets the standard deviation of each channel inside the cloud."""
@@ -476,7 +478,7 @@ class Analysis:
             valid_spans = np.array(valid_spans)
 
             if not valid_spans.size:
-                logger.info('The cloud has no valid spans')
+                raise ValueError('The cloud has no valid spans')
 
             edges = self.orig[valid_spans[:, :, 0], valid_spans[:, :, 1]]
             return edges

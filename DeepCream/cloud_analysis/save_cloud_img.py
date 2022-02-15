@@ -1,17 +1,16 @@
 import logging
 import os
+import traceback
 
 import cv2 as cv
 import numpy as np
 import pandas as pd
-
-import traceback
-
 from tqdm import tqdm
+
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
-from DeepCream.database import DataBase
 from DeepCream.constants import ABS_PATH, DEFAULT_BORDER_WIDTH, get_time
+from DeepCream.database import DataBase
 
 logger = logging.getLogger('DeepCream.save_cloud_img')
 input_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/input'))
@@ -50,20 +49,25 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
                           cv.COLOR_BGR2RGB)
         if not img.size:
             logger.error('Orig was loaded empty')
+
         identifier = database.save_orig(img)
 
         mask = cloud_detection.evaluate_image(img)
-        if not np.any(mask):
-            logger.warning('There are no clouds on this image')
-            break
+
         database.save_mask(mask, identifier)
 
-        analysis = Analysis(img, mask, 10, 1)
+        analysis = Analysis(img, mask, 20, 0.9)
         df = pd.DataFrame(columns=columns)
 
         for j, cloud in enumerate(analysis.clouds):
             std = cloud.std()
             mean = cloud.mean()
+            try:
+                diff_edges = cloud.diff_edges(DEFAULT_BORDER_WIDTH,
+                                              DEFAULT_BORDER_WIDTH)
+            except ValueError as err:
+                logger.warning(err)
+                continue
 
             df.loc[j, ['center_x']] = cloud.center[0]
             df.loc[j, ['center_y']] = cloud.center[1]
@@ -86,8 +90,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
             df.loc[j, ['std b']] = std[2]
             df.loc[j, ['std']] = sum(std) / 3
             df.loc[j, ['transparency']] = cloud.transparency()
-            df.loc[j, ['sharp edges']] = np.mean(
-                cloud.diff_edges(DEFAULT_BORDER_WIDTH, DEFAULT_BORDER_WIDTH))
+            df.loc[j, ['sharp edges']] = np.mean(diff_edges)
 
         database.save_analysis(df, identifier)
 
