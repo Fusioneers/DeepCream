@@ -198,6 +198,10 @@ class Analysis:
             all_clouds.append(self.Cloud(self.orig, img, mask, contour))
         logger.debug('Created list of all clouds')
 
+        all_clouds = sorted(all_clouds,
+                            key=lambda cloud:
+                            getattr(cloud, 'contour_area'), reverse=True)
+
         # TODO test this
         def check_valid(cloud):
             edges = cloud.edges(border_width, border_width, convex_hull=True)
@@ -219,10 +223,6 @@ class Analysis:
                 clouds = all_clouds[:max_num_clouds]
                 logger.debug('Filtered clouds by size')
         else:
-            all_clouds = sorted(all_clouds,
-                                key=lambda cloud:
-                                getattr(cloud, 'contour_area'), reverse=True)
-
             # TODO test this
             clouds = []
             for cloud in all_clouds:
@@ -383,8 +383,8 @@ class Analysis:
             of the cloud.
 
             Returns:
-                A value between 0 and 255. 255 means that the cloud is perfect
-                grey, while 0 means a very colorful cloud.
+                A value between 0 and 255. 0 means that the cloud is perfect
+                grey, while 255 means a very colorful cloud.
             """
 
             sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
@@ -393,6 +393,7 @@ class Analysis:
                 out = np.sum(inverse) / np.count_nonzero(inverse)
             else:
                 out = 0
+            out = 255 - out
             return out
 
         # TODO docstring usage example

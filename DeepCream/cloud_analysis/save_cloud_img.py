@@ -22,22 +22,26 @@ num_img = len(os.listdir(input_dir))
 cloud_detection = CloudDetection()
 database = DataBase(output_dir)
 
-columns = ['center_x',
-           'center_y',
-           'contour_perimeter',
-           'contour_area',
-           'hull_perimeter',
-           'hull_area',
+columns = ['center x',
+           'center y',
+           'contour perimeter',
+           'contour area',
+           'hull perimeter',
+           'hull area',
+           'roundness',
+           'convexity',
+           'solidity',
            'rectangularity',
            'elongation',
-           'mean_r',
-           'mean_g',
-           'mean_b',
-           'std_r',
-           'std_g',
-           'std_b',
+           'mean r',
+           'mean g',
+           'mean b',
+           'std r',
+           'std g',
+           'std b',
+           'std',
            'transparency',
-           'mean_diff_edges']
+           'sharp edges']
 
 for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
     try:
@@ -64,21 +68,25 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
             df.loc[j, ['center_x']] = cloud.center[0]
             df.loc[j, ['center_y']] = cloud.center[1]
             df.loc[
-                j, ['contour_perimeter']] = cloud.contour_perimeter
-            df.loc[j, ['contour_area']] = cloud.contour_area
-            df.loc[j, ['hull_area']] = cloud.hull_area
-            df.loc[j, ['hull_perimeter']] = cloud.hull_perimeter
+                j, ['contour perimeter']] = cloud.contour_perimeter
+            df.loc[j, ['contour area']] = cloud.contour_area
+            df.loc[j, ['hull area']] = cloud.hull_area
+            df.loc[j, ['hull perimeter']] = cloud.hull_perimeter
+            df.loc[j, ['convexity']] = cloud.convexity()
+            df.loc[j, ['roundness']] = cloud.roundness()
+            df.loc[j, ['solidity']] = cloud.solidity()
             df.loc[j, ['rectangularity']] = cloud.rectangularity()
             df.loc[j, ['elongation']] = cloud.elongation()
 
-            df.loc[j, ['mean_r']] = mean[0]
-            df.loc[j, ['mean_g']] = mean[1]
-            df.loc[j, ['mean_b']] = mean[2]
-            df.loc[j, ['std_r']] = std[0]
-            df.loc[j, ['std_g']] = std[1]
-            df.loc[j, ['std_b']] = std[2]
+            df.loc[j, ['mean r']] = mean[0]
+            df.loc[j, ['mean g']] = mean[1]
+            df.loc[j, ['mean b']] = mean[2]
+            df.loc[j, ['std r']] = std[0]
+            df.loc[j, ['std g']] = std[1]
+            df.loc[j, ['std b']] = std[2]
+            df.loc[j, ['std']] = sum(std) / 3
             df.loc[j, ['transparency']] = cloud.transparency()
-            df.loc[j, ['mean_diff_edges']] = np.mean(
+            df.loc[j, ['sharp edges']] = np.mean(
                 cloud.diff_edges(DEFAULT_BORDER_WIDTH, DEFAULT_BORDER_WIDTH))
 
         database.save_analysis(df, identifier)
