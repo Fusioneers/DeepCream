@@ -24,7 +24,9 @@ properties such as convexity or transparency can be read off.
 import logging
 
 import cv2 as cv
+import matplotlib.pyplot as plt
 import numpy as np
+from skimage import measure
 
 from DeepCream.constants import (DEFAULT_STEP_LEN,
                                  DEFAULT_APPR_DIST,
@@ -114,7 +116,7 @@ class Analysis:
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
 
-        self.mask = cv.resize(mask, (self.height, self.width))
+        self.mask = cv.resize(mask, (self.width, self.height))
         logger.debug('Resized mask')
 
         if not np.any(self.mask):
@@ -197,6 +199,9 @@ class Analysis:
             img = cv.bitwise_and(self.orig, self.orig, mask=mask)
             all_clouds.append(self.Cloud(self.orig, img, mask, contour))
         logger.debug('Created list of all clouds')
+
+        all_clouds = list(filter(lambda x: np.all(x.mean() > 5), all_clouds))
+        logger.debug('Filtered clouds by minimum color')
 
         all_clouds = sorted(all_clouds,
                             key=lambda cloud:
@@ -361,19 +366,17 @@ class Analysis:
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return min(width, height) / max(width, height)
 
-        def mean(self) -> list:
+        def mean(self) -> np.ndarray:
             """Gets the mean of each channel inside the cloud"""
             mean = cv.mean(self.img, mask=self.mask)
-            if any(mean == 0):
-                raise ValueError('Cloud is too dark')
-            return mean
+            return np.array(mean[:3])
 
-        def std(self) -> tuple:
+        def std(self) -> np.ndarray:
             """Gets the standard deviation of each channel inside the cloud."""
 
             _, std = cv.meanStdDev(self.img, mask=self.mask)
             std = (std[0][0], std[1][0], std[2][0])
-            return std
+            return np.array(std)
 
         def transparency(self) -> float:
             """Gets the transparency of the cloud.
