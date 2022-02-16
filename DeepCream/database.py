@@ -268,7 +268,7 @@ class DataBase:
     def save_analysis(self, analysis: pd.DataFrame, identifier: str):
         logger.debug(f'Attempting to save analysis to {identifier}')
         if analysis.empty:
-            raise ValueError(f'Analysis in {identifier} is empty')
+            logger.warning(f'Analysis trying to save in {identifier} is empty')
 
         if identifier not in self.metadata['data']:
             raise ValueError(f'Identifier {identifier} is not in database')
@@ -276,7 +276,8 @@ class DataBase:
         self.metadata['data'][identifier][
             'created analysis'] = get_time()
 
-        analysis.to_csv(self.__get_path(identifier, 'analysis.csv'))
+        analysis.to_csv(self.__get_path(identifier, 'analysis.csv'),
+                        index=False)
 
         if DEBUG_MODE:
             self.metadata['data'][identifier]['quality'] = self.__get_quality(
@@ -299,7 +300,8 @@ class DataBase:
             'created classification'] = get_time()
 
         classification.to_csv(
-            self.__get_path(identifier, 'classification.csv'))
+            self.__get_path(identifier, 'classification.csv'),
+            index=False)
 
         self.__update_metadata()
 

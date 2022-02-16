@@ -11,13 +11,17 @@ VERY_HIGH = 3
 
 # see https://en.wikipedia.org/wiki/List_of_cloud_types
 
+
+# TODO document
 CLOUD_TYPES = {
     'Noctilucent clouds': {
         'Type 1': {
-            'transparency': VERY_HIGH,
-            'sharp edges': VERY_LOW,
-            'elongation': MEDIUM_HIGH,
-            'solidity': RATHER_LOW,
+            'A': {
+                'transparency': VERY_HIGH,
+                'sharp edges': VERY_LOW,
+                'elongation': MEDIUM_HIGH,
+                'solidity': RATHER_LOW,
+            },
         },
         'Type 2': {
             'A': {
@@ -33,7 +37,7 @@ CLOUD_TYPES = {
                 'elongation': HIGH,
                 'solidity': MEDIUM_LOW,
                 'rectangularity': RATHER_HIGH,
-            }
+            },
         },
         'Type 3': {
             'A': {
@@ -52,25 +56,31 @@ CLOUD_TYPES = {
             },
         },
         'Type 4': {
-            'transparency': LOW,
-            'sharp edges': MEDIUM,
-            'elongation': LOW,
-            'roundness': VERY_HIGH,
-            'solidity': HIGH,
+            'A': {
+                'transparency': LOW,
+                'sharp edges': MEDIUM,
+                'elongation': LOW,
+                'roundness': VERY_HIGH,
+                'solidity': HIGH,
+            },
         },
     },
     'Polar stratospheric clouds': {
         'Type 1': {
-            'transparency': HIGH,
-            'sharp edges': LOW,
-            'mean r': HIGH,
-            'std r': HIGH,
+            'A': {
+                'transparency': HIGH,
+                'sharp edges': LOW,
+                'mean r': HIGH,
+                'std r': HIGH,
+            },
         },
         'Type 2': {
-            'transparency': HIGH,
-            'sharp edges': RATHER_LOW,
-            'mean r': HIGH,
-            'std r': HIGH,
+            'A': {
+                'transparency': HIGH,
+                'sharp edges': RATHER_LOW,
+                'mean r': HIGH,
+                'std r': HIGH,
+            },
         },
     },
     'Tropospheric clouds': {
@@ -98,35 +108,10 @@ CLOUD_TYPES = {
         },
         'Mid level': {
             'Genus altocumulus': {
-                'Stratiformis': {
-                    'transparency': RATHER_LOW,
-                    'sharp edges': HIGH,
-                },
-                'Lenticularis': {
-                    'transparency': LOW,
-                    'sharp edges': HIGH,
-                    'roundness': VERY_HIGH,
-                },
-                'Volutus': {
-                    'transparency': RATHER_LOW,
-                    'sharp edges': RATHER_HIGH,
-                    'elongation': HIGH,
-                },
-                'Castellanus': {
-                    'transparency': LOW,
-                    'convexity': MEDIUM,
-                    'std': MEDIUM_LOW,
-                },
-                'Floccus': {
-                    'transparency': MEDIUM,
-                    'std': HIGH,
-                    'convexity': MEDIUM,
-                    'solidity': MEDIUM_HIGH,
-                },
-            },
-            'Genus altostratus': {
-                'transparency': MEDIUM_HIGH,
-                'solidity': HIGH,
+                'transparency': MEDIUM,
+                'std': HIGH,
+                'convexity': MEDIUM,
+                'solidity': MEDIUM_HIGH,
             },
         },
         'Towering vertical': {
@@ -158,6 +143,6 @@ CLOUD_TYPES = {
                 'sharp edges': VERY_LOW,
                 'convexity': HIGH,
             },
-        }
+        },
     },
 }

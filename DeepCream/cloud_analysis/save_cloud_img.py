@@ -3,23 +3,30 @@ import os
 import traceback
 
 import cv2 as cv
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
-from DeepCream.constants import ABS_PATH, DEFAULT_BORDER_WIDTH, get_time
+from DeepCream.constants import (DEBUG_MODE,
+                                 ABS_PATH,
+                                 DEFAULT_BORDER_WIDTH,
+                                 get_time,
+                                 )
 from DeepCream.database import DataBase
 
 logger = logging.getLogger('DeepCream.save_cloud_img')
 input_dir = os.path.normpath(os.path.join(ABS_PATH, 'data/input'))
 output_dir = os.path.normpath(
-    os.path.join(ABS_PATH, f'data/test_database {get_time()}'))
+    os.path.join(ABS_PATH, f'data/database {get_time()}'))
 num_img = len(os.listdir(input_dir))
 
 cloud_detection = CloudDetection()
 database = DataBase(output_dir)
+classification = Classification()
 
 columns = ['center x',
            'center y',
@@ -56,7 +63,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_mask(mask, identifier)
 
-        analysis = Analysis(img, mask, 20, 0.9)
+        analysis = Analysis(img, mask, 10, 1)
         df = pd.DataFrame(columns=columns)
 
         for j, cloud in enumerate(analysis.clouds):
@@ -69,8 +76,8 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
                 logger.warning(err)
                 continue
 
-            df.loc[j, ['center_x']] = cloud.center[0]
-            df.loc[j, ['center_y']] = cloud.center[1]
+            df.loc[j, ['center x']] = cloud.center[0]
+            df.loc[j, ['center y']] = cloud.center[1]
             df.loc[
                 j, ['contour perimeter']] = cloud.contour_perimeter
             df.loc[j, ['contour area']] = cloud.contour_area
@@ -94,7 +101,17 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_analysis(df, identifier)
 
-        database.save_art({'test': 'abc'}, identifier)
+        classification_ = classification.get_classification(df)
+        database.save_classification(classification_, identifier)
+
+        if DEBUG_MODE:
+            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(5, 3))
+            axes[0].imshow(analysis.clouds[0].img)
+            axes[1].imshow(img)
+            axes[2].imshow(mask)
+            plt.show()
+            print(f'Type of largest cloud: '
+                  f'{classification_.loc[0].max()}')
 
     except (ValueError,
             TypeError,

@@ -38,7 +38,6 @@ def get_data_frame_from_database(database: str) -> pd.DataFrame:
             all_clouds = all_clouds.append(clouds)
         except ValueError as err:
             logger.error(err)
-    # all_clouds.columns = columns + ['number', ]
     logger.info('Loaded dataframe from database')
 
     return all_clouds
