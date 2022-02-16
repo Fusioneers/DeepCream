@@ -10,7 +10,7 @@ from DeepCream.classification.cloud_types import CLOUD_TYPES
 from DeepCream.classification.load_database import get_data_frame_from_database
 from DeepCream.constants import ABS_PATH
 
-logger = logging.getLogger('DeepCream.cloud_analysis.classification')
+logger = logging.getLogger('DeepCream.classification')
 
 
 class Classification:
@@ -28,6 +28,7 @@ class Classification:
                        'mean r',
                        'mean g',
                        'mean b',
+                       # TODO hue
                        'std r',
                        'std g',
                        'std b',

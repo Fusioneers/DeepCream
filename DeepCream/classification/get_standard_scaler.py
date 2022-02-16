@@ -13,7 +13,7 @@ path = os.path.join(ABS_PATH, 'DeepCream', 'classification',
 logger = logging.getLogger('DeepCream.get_standard_scaler')
 
 df = get_data_frame_from_database(
-    os.path.join(ABS_PATH, 'data', 'database 2022-02-16 14-22-05'))
+    os.path.join(ABS_PATH, 'data', 'database 2022-02-16 21-44-30'))
 logger.info(f'Dataframe descriptive statistics: {df.describe()}')
 
 data = df.to_numpy()

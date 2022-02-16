@@ -14,92 +14,92 @@ VERY_HIGH = 3
 
 # TODO document
 CLOUD_TYPES = {
-    'Noctilucent clouds': {
-        'Type 1': {
-            'A': {
-                'transparency': VERY_HIGH,
-                'sharp edges': VERY_LOW,
-                'elongation': MEDIUM_HIGH,
-                'solidity': RATHER_LOW,
-            },
-        },
-        'Type 2': {
-            'A': {
-                'transparency': HIGH,
-                'sharp edges': LOW,
-                'elongation': HIGH,
-                'solidity': MEDIUM_LOW,
-                'rectangularity': RATHER_HIGH,
-            },
-            'B': {
-                'transparency': HIGH,
-                'sharp edges': MEDIUM,
-                'elongation': HIGH,
-                'solidity': MEDIUM_LOW,
-                'rectangularity': RATHER_HIGH,
-            },
-        },
-        'Type 3': {
-            'A': {
-                'transparency': HIGH,
-                'sharp edges': MEDIUM,
-                'elongation': MEDIUM,
-                'rectangularity': HIGH,
-                'solidity': HIGH,
-            },
-            'B': {
-                'transparency': HIGH,
-                'sharp edges': MEDIUM,
-                'elongation': MEDIUM,
-                'rectangularity': HIGH,
-                'solidity': MEDIUM,
-            },
-        },
-        'Type 4': {
-            'A': {
-                'transparency': LOW,
-                'sharp edges': MEDIUM,
-                'elongation': LOW,
-                'roundness': VERY_HIGH,
-                'solidity': HIGH,
-            },
-        },
-    },
-    'Polar stratospheric clouds': {
-        'Type 1': {
-            'A': {
-                'transparency': HIGH,
-                'sharp edges': LOW,
-                'mean r': HIGH,
-                'std r': HIGH,
-            },
-        },
-        'Type 2': {
-            'A': {
-                'transparency': HIGH,
-                'sharp edges': RATHER_LOW,
-                'mean r': HIGH,
-                'std r': HIGH,
-            },
-        },
-    },
+    # 'Noctilucent clouds': {
+    #     'Type 1': {
+    #         'A': {
+    #             'transparency': VERY_HIGH,
+    #             'sharp edges': VERY_LOW,
+    #             'elongation': MEDIUM_HIGH,
+    #             'solidity': RATHER_LOW,
+    #         },
+    #     },
+    #     'Type 2': {
+    #         'A': {
+    #             'transparency': HIGH,
+    #             'sharp edges': LOW,
+    #             'elongation': HIGH,
+    #             'solidity': MEDIUM_LOW,
+    #             'rectangularity': RATHER_HIGH,
+    #         },
+    #         'B': {
+    #             'transparency': HIGH,
+    #             'sharp edges': MEDIUM,
+    #             'elongation': HIGH,
+    #             'solidity': MEDIUM_LOW,
+    #             'rectangularity': RATHER_HIGH,
+    #         },
+    #     },
+    #     'Type 3': {
+    #         'A': {
+    #             'transparency': HIGH,
+    #             'sharp edges': MEDIUM,
+    #             'elongation': MEDIUM,
+    #             'rectangularity': HIGH,
+    #             'solidity': HIGH,
+    #         },
+    #         'B': {
+    #             'transparency': HIGH,
+    #             'sharp edges': MEDIUM,
+    #             'elongation': MEDIUM,
+    #             'rectangularity': HIGH,
+    #             'solidity': MEDIUM,
+    #         },
+    #     },
+    #     'Type 4': {
+    #         'A': {
+    #             'transparency': LOW,
+    #             'sharp edges': MEDIUM,
+    #             'elongation': LOW,
+    #             'roundness': VERY_HIGH,
+    #             'solidity': HIGH,
+    #         },
+    #     },
+    # },
+    # 'Polar stratospheric clouds': {
+    #     'Type 1': {
+    #         'A': {
+    #             'transparency': HIGH,
+    #             'sharp edges': LOW,
+    #             'mean r': HIGH,
+    #             'std r': HIGH,
+    #         },
+    #     },
+    #     'Type 2': {
+    #         'A': {
+    #             'transparency': HIGH,
+    #             'sharp edges': RATHER_LOW,
+    #             'mean r': HIGH,
+    #             'std r': HIGH,
+    #         },
+    #     },
+    # },
     'Tropospheric clouds': {
         'High level': {
             'Genus cirrus': {
                 'transparency': MEDIUM_HIGH,
                 'sharp edges': RATHER_HIGH,
-                'std': HIGH,
-                'solidity': LOW,
+                'std': VERY_HIGH,
+                'solidity': RATHER_LOW,
             },
             'Genus cirrocumulus': {
-                'transparency': MEDIUM_LOW,
+                'transparency': MEDIUM_HIGH,
                 'sharp edges': RATHER_HIGH,
                 'solidity': HIGH,
                 'convexity': RATHER_HIGH,
                 'roundness': HIGH,
             },
             'Genus cirrostratus': {
-                'transparency': RATHER_LOW,
+                'transparency': RATHER_HIGH,
                 'sharp edges': RATHER_LOW,
                 'solidity': HIGH,
                 'convexity': RATHER_HIGH,
@@ -110,8 +110,8 @@ CLOUD_TYPES = {
             'Genus altocumulus': {
                 'transparency': MEDIUM,
                 'std': HIGH,
-                'convexity': MEDIUM,
-                'solidity': MEDIUM_HIGH,
+                'convexity': LOW,
+                'solidity': VERY_LOW,
             },
         },
         'Towering vertical': {
@@ -121,7 +121,7 @@ CLOUD_TYPES = {
                 'std': RATHER_LOW,
             },
             'Genus cumulus': {
-                'transparency': VERY_LOW,
+                'transparency': LOW,
                 'sharp edges': HIGH,
                 'std': LOW,
             },
@@ -130,13 +130,14 @@ CLOUD_TYPES = {
             'Genus nimbostratus': {
                 'transparency': LOW,
                 'sharp edges': MEDIUM,
+                'convexity': LOW,
             },
         },
         'Low level': {
             'Genus stratocumulus': {
-                'transparency': RATHER_LOW,
+                'transparency': RATHER_HIGH,
                 'sharp edges': MEDIUM,
-                'std': RATHER_HIGH,
+                'std': MEDIUM,
             },
             'Genus stratus': {
                 'transparency': VERY_HIGH,

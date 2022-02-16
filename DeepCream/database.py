@@ -69,8 +69,11 @@ class DataBase:
         return os.path.join(self.__get_id_path(str(identifier)), name)
 
     def __save_img(self, identifier: str, name: str, img: np.ndarray):
-        cv.imwrite(self.__get_path(identifier, name),
-                   cv.cvtColor(img, cv.COLOR_RGB2BGR))
+        if len(img.shape) == 3:
+            cv.imwrite(self.__get_path(identifier, name),
+                       cv.cvtColor(img, cv.COLOR_RGB2BGR))
+        else:
+            cv.imwrite(self.__get_path(identifier, name), img)
 
     def __load_img(self, identifier: str, name: str) -> np.ndarray:
         img = cv.cvtColor(
@@ -291,7 +294,8 @@ class DataBase:
                             identifier: str):
         logger.debug(f'Attempting to save classification to {identifier}')
         if classification.empty:
-            raise ValueError('Classification is empty')
+            logger.warning(
+                f'Classification trying to save in {identifier} is empty')
 
         if identifier not in self.metadata['data']:
             raise ValueError('Identifier not in database')
@@ -310,8 +314,8 @@ class DataBase:
     def save_art(self, art: dict, identifier: str):
         logger.debug(f'Attempting to save art to {identifier}')
         if not len(art):
-            raise ValueError('Classification is empty')
-
+            logger.warning(
+                f'Art trying to save in {identifier} is empty')
         if identifier not in self.metadata['data']:
             raise ValueError('Identifier not in database')
 

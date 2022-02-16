@@ -59,7 +59,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         identifier = database.save_orig(img)
 
-        mask = cloud_detection.evaluate_image(img)
+        mask = cloud_detection.evaluate_image(img).astype('uint8') * 255
 
         database.save_mask(mask, identifier)
 
@@ -70,8 +70,8 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
             std = cloud.std()
             mean = cloud.mean()
             try:
-                diff_edges = cloud.diff_edges(DEFAULT_BORDER_WIDTH,
-                                              DEFAULT_BORDER_WIDTH)
+                diff_edges = cloud.diff_edges(50,
+                                              200)
             except ValueError as err:
                 logger.warning(err)
                 continue
@@ -101,17 +101,17 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_analysis(df, identifier)
 
-        # classification_ = classification.get_classification(df)
-        # database.save_classification(classification_, identifier)
-        #
-        # if DEBUG_MODE:
-        #     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(5, 3))
-        #     axes[0].imshow(analysis.clouds[0].img)
-        #     axes[1].imshow(img)
-        #     axes[2].imshow(mask)
-        #     plt.show()
-        #     print(f'Type of largest cloud: '
-        #           f'{classification_.loc[0].idxmax()}')
+        classification_ = classification.get_classification(df)
+        database.save_classification(classification_, identifier)
+
+        if DEBUG_MODE:
+            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 9))
+            axes[0].imshow(analysis.clouds[0].img)
+            axes[1].imshow(img)
+            axes[2].imshow(mask)
+            fig.suptitle(f'Type of largest cloud: '
+                         f'{classification_.loc[0].idxmax()}')
+            plt.show()
 
     except (ValueError,
             TypeError,

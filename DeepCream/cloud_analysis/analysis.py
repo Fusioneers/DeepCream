@@ -143,8 +143,8 @@ class Analysis:
         the contours.
         """
 
-        contours, _ = cv.findContours(cv.medianBlur(self.mask, 3),
-                                      cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+        contours, _ = cv.findContours(self.mask,
+                                      cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
         logger.debug('Found contours with cv.findContours')
 
         contours = [np.squeeze(contour) for contour in contours]
