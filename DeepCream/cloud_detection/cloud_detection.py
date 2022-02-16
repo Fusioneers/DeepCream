@@ -6,7 +6,6 @@ from PIL import Image
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from numpy import asarray
-from pycoral.utils import edgetpu
 
 from DeepCream.constants import ABS_PATH
 
@@ -41,8 +40,10 @@ class CloudDetection:
         if not tpu_support:
             self.interpreter = None
             self.model = tf.keras.models.load_model(os.path.join(ABS_PATH,
-                                                 'DeepCream/cloud_detection/models/keras'))
+                                                                 'DeepCream/cloud_detection/models/keras'))
         else:
+            from pycoral.utils import edgetpu
+
             self.model = None
             self.interpreter = edgetpu.make_interpreter(
                 os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
@@ -122,7 +123,8 @@ class CloudDetection:
         mask = self.__ai_generate_image_mask(scaled)
 
         # Make the result binary
-        _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1, cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,
+                                cv2.THRESH_BINARY)
 
         # plt.figure(figsize=(12, 8))
         # plt.subplot(121)

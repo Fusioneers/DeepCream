@@ -101,17 +101,17 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_analysis(df, identifier)
 
-        classification_ = classification.get_classification(df)
-        database.save_classification(classification_, identifier)
-
-        if DEBUG_MODE:
-            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(5, 3))
-            axes[0].imshow(analysis.clouds[0].img)
-            axes[1].imshow(img)
-            axes[2].imshow(mask)
-            plt.show()
-            print(f'Type of largest cloud: '
-                  f'{classification_.loc[0].max()}')
+        # classification_ = classification.get_classification(df)
+        # database.save_classification(classification_, identifier)
+        #
+        # if DEBUG_MODE:
+        #     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(5, 3))
+        #     axes[0].imshow(analysis.clouds[0].img)
+        #     axes[1].imshow(img)
+        #     axes[2].imshow(mask)
+        #     plt.show()
+        #     print(f'Type of largest cloud: '
+        #           f'{classification_.loc[0].idxmax()}')
 
     except (ValueError,
             TypeError,
