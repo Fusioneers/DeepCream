@@ -2,17 +2,19 @@ import logging
 import os.path
 import cv2
 import numpy as np
-from keras.models import load_model
+from PIL import Image
+import tensorflow as tf
 from matplotlib import pyplot as plt
-# from pycoral.utils import edgetpu
-# from tensorflow.python.keras.models import load_model
+from numpy import asarray
+from pycoral.utils import edgetpu
+
 from DeepCream.constants import ABS_PATH
 
 logger = logging.getLogger('DeepCream.cloud_detection')
 
 
 class CloudDetection:
-    def __init__(self, binary_cloud_threshold: float = 0.5,
+    def __init__(self, binary_cloud_threshold: float = 0.85,
                  tpu_support: bool = False):
 
         """
@@ -38,16 +40,16 @@ class CloudDetection:
 
         if not tpu_support:
             self.interpreter = None
-            self.model = load_model(os.path.join(ABS_PATH,
+            self.model = tf.keras.models.load_model(os.path.join(ABS_PATH,
                                                  'DeepCream/cloud_detection/models/keras'))
-        # else:
-        # self.model = None
-        # self.interpreter = edgetpu.make_interpreter(
-        #     os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
-        #                            '/tflite/model.tflite'))
-        # self.interpreter.allocate_tensors()
-        # self.input_details = self.interpreter.get_input_details()
-        # self.output_details = self.interpreter.get_output_details()
+        else:
+            self.model = None
+            self.interpreter = edgetpu.make_interpreter(
+                os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
+                                       '/tflite/model.tflite'))
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
 
     def __load_image(self, image: np.ndarray):
 
@@ -63,10 +65,10 @@ class CloudDetection:
 
         """
 
-        normal = cv2.resize(image, (self.WIDTH, self.HEIGHT),
-                            interpolation=cv2.INTER_AREA)
-
-        scaled = normal.astype('float32')
+        scaled = Image.fromarray(image)
+        scaled.thumbnail((self.WIDTH, self.HEIGHT))
+        scaled = asarray(scaled)
+        scaled = scaled.astype('float32')
         scaled /= 255.0
 
         return scaled
@@ -88,21 +90,13 @@ class CloudDetection:
         """
 
         if self.model is not None:
-            pred = (self.model.predict(np.array([image])).reshape(
-                self.HEIGHT, self.WIDTH, 1))
-            mask = cv2.normalize(
-                pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-            return mask
+            mask = self.model.predict(np.asarray([image]))
+            return mask[0]
         elif self.interpreter is not None:
             self.interpreter.set_tensor(
-                self.input_details[0]['index'], [image])
+                self.input_details[0]['index'], image)
             self.interpreter.invoke()
-            pred = self.interpreter.get_tensor(
-                self.output_details[0]['index'])
-            mask = cv2.normalize(
-                pred, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-
-            return mask
+            return self.interpreter.get_tensor(self.output_details[0]['index'])
         else:
             raise ValueError('No AI was configured')
 
@@ -125,12 +119,10 @@ class CloudDetection:
             raise ValueError('Image was not loaded properly')
 
         # Compute the mask
-        mask = self.__ai_generate_image_mask(scaled).reshape(self.HEIGHT,
-                                                             self.WIDTH)
+        mask = self.__ai_generate_image_mask(scaled)
 
         # Make the result binary
-        _, mask = cv2.threshold(mask, self.binaryCloudThreshold * 255, 255,
-                                cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1, cv2.THRESH_BINARY)
 
         # plt.figure(figsize=(12, 8))
         # plt.subplot(121)
