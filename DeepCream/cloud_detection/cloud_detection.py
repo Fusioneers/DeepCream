@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-from matplotlib import pyplot as plt
 from numpy import asarray
 
 from DeepCream.constants import ABS_PATH
@@ -118,6 +117,9 @@ class CloudDetection:
         if scaled is None:
             logger.error('Image was not loaded properly')
             raise ValueError('Image was not loaded properly')
+        elif scaled.shape != (None, self.HEIGHT, self.WIDTH, 1):
+            logger.error('Image has wrong dimensions')
+            raise ValueError('Image has wrong dimensions')
 
         # Compute the mask
         mask = self.__ai_generate_image_mask(scaled)
