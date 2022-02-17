@@ -87,9 +87,10 @@ CLOUD_TYPES = {
         'High level': {
             'Genus cirrus': {
                 'transparency': MEDIUM_HIGH,
-                'sharp edges': RATHER_HIGH,
-                'std': VERY_HIGH,
-                'solidity': RATHER_LOW,
+                'sharp edges': HIGH,
+                'std': HIGH,
+                'solidity': LOW,
+                'convexity': VERY_LOW,
             },
             'Genus cirrocumulus': {
                 'transparency': MEDIUM_HIGH,
@@ -97,19 +98,19 @@ CLOUD_TYPES = {
                 'solidity': HIGH,
                 'convexity': RATHER_HIGH,
                 'roundness': HIGH,
+                'std': HIGH,
             },
             'Genus cirrostratus': {
-                'transparency': RATHER_HIGH,
-                'sharp edges': RATHER_LOW,
-                'solidity': HIGH,
+                'transparency': HIGH,
+                'sharp edges': LOW,
+                'solidity': VERY_HIGH,
                 'convexity': RATHER_HIGH,
-                'roundness': HIGH,
             },
         },
         'Mid level': {
             'Genus altocumulus': {
                 'transparency': MEDIUM,
-                'std': HIGH,
+                'std': VERY_HIGH,
                 'convexity': LOW,
                 'solidity': VERY_LOW,
             },
@@ -119,6 +120,7 @@ CLOUD_TYPES = {
                 'transparency': VERY_LOW,
                 'sharp edges': VERY_HIGH,
                 'std': RATHER_LOW,
+                'solidity': HIGH,
             },
             'Genus cumulus': {
                 'transparency': LOW,
@@ -129,15 +131,16 @@ CLOUD_TYPES = {
         'moderate vertical': {
             'Genus nimbostratus': {
                 'transparency': LOW,
-                'sharp edges': MEDIUM,
+                'sharp edges': LOW,
                 'convexity': LOW,
+                'std': VERY_LOW,
             },
         },
         'Low level': {
             'Genus stratocumulus': {
                 'transparency': RATHER_HIGH,
-                'sharp edges': MEDIUM,
-                'std': MEDIUM,
+                'sharp edges': MEDIUM_HIGH,
+                'std': HIGH,
             },
             'Genus stratus': {
                 'transparency': VERY_HIGH,
