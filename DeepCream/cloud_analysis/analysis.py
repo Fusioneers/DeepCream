@@ -24,14 +24,14 @@ properties such as convexity or transparency can be read off.
 import logging
 
 import cv2 as cv
-import matplotlib.pyplot as plt
 import numpy as np
-from skimage import measure
+import pandas as pd
 
 from DeepCream.constants import (DEFAULT_STEP_LEN,
                                  DEFAULT_APPR_DIST,
                                  DEFAULT_BORDER_WIDTH,
-                                 DEFAULT_VAL_THRESHOLD)
+                                 DEFAULT_VAL_THRESHOLD,
+                                 analysis_features, )
 
 logger = logging.getLogger('DeepCream.cloud_analysis.analysis')
 
@@ -242,6 +242,44 @@ class Analysis:
             logger.debug('Filtered clouds by visible area border')
 
         return clouds
+
+    def evaluate(self) -> pd.DataFrame:
+        df = pd.DataFrame(columns=analysis_features)
+
+        for j, cloud in enumerate(self.clouds):
+            std = cloud.std()
+            mean = cloud.mean()
+            try:
+                diff_edges = cloud.diff_edges(50,
+                                              200)
+            except ValueError as err:
+                logger.warning(err)
+                continue
+
+            df.loc[j, ['center x']] = cloud.center[0]
+            df.loc[j, ['center y']] = cloud.center[1]
+            df.loc[
+                j, ['contour perimeter']] = cloud.contour_perimeter
+            df.loc[j, ['contour area']] = cloud.contour_area
+            df.loc[j, ['hull area']] = cloud.hull_area
+            df.loc[j, ['hull perimeter']] = cloud.hull_perimeter
+            df.loc[j, ['convexity']] = cloud.convexity()
+            df.loc[j, ['roundness']] = cloud.roundness()
+            df.loc[j, ['solidity']] = cloud.solidity()
+            df.loc[j, ['rectangularity']] = cloud.rectangularity()
+            df.loc[j, ['elongation']] = cloud.elongation()
+
+            df.loc[j, ['mean r']] = mean[0]
+            df.loc[j, ['mean g']] = mean[1]
+            df.loc[j, ['mean b']] = mean[2]
+            df.loc[j, ['std r']] = std[0]
+            df.loc[j, ['std g']] = std[1]
+            df.loc[j, ['std b']] = std[2]
+            df.loc[j, ['std']] = sum(std) / 3
+            df.loc[j, ['transparency']] = cloud.transparency()
+            df.loc[j, ['sharp edges']] = np.mean(diff_edges)
+
+        return df
 
     class Cloud:
         """A single cloud in orig.

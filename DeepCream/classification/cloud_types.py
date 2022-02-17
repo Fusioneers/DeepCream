@@ -110,6 +110,7 @@ CLOUD_TYPES = {
         'Mid level': {
             'Genus altocumulus': {
                 'transparency': MEDIUM,
+                'sharp edges': HIGH,
                 'std': VERY_HIGH,
                 'convexity': LOW,
                 'solidity': VERY_LOW,
@@ -130,7 +131,7 @@ CLOUD_TYPES = {
         },
         'moderate vertical': {
             'Genus nimbostratus': {
-                'transparency': LOW,
+                'transparency': RATHER_LOW,
                 'sharp edges': LOW,
                 'convexity': LOW,
                 'std': VERY_LOW,

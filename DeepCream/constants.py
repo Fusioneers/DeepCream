@@ -33,3 +33,26 @@ DEFAULT_VAL_THRESHOLD = 30
 
 QUALITY_THRESHOLD = 0.2
 MAX_DATABASE_SIZE = 1000 * ((2 ** 10) ** 2)
+
+analysis_features = ['center x',
+                     'center y',
+                     'contour perimeter',
+                     'contour area',
+                     'hull perimeter',
+                     'hull area',
+                     'roundness',
+                     'convexity',
+                     'solidity',
+                     'rectangularity',
+                     'elongation',
+                     'mean r',
+                     'mean g',
+                     'mean b',
+                     'std r',
+                     'std g',
+                     'std b',
+                     'std',
+                     'transparency',
+                     'sharp edges']
+
+queue_max_size = 200

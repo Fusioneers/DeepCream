@@ -4,38 +4,14 @@ import os
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
 
 from DeepCream.classification.cloud_types import CLOUD_TYPES
-from DeepCream.classification.load_database import get_data_frame_from_database
-from DeepCream.constants import ABS_PATH
+from DeepCream.constants import ABS_PATH, analysis_features
 
 logger = logging.getLogger('DeepCream.classification')
 
 
 class Classification:
-    feature_columns = ['center x',
-                       'center y',
-                       'contour perimeter',
-                       'contour area',
-                       'hull perimeter',
-                       'hull area',
-                       'roundness',
-                       'convexity',
-                       'solidity',
-                       'rectangularity',
-                       'elongation',
-                       'mean r',
-                       'mean g',
-                       'mean b',
-                       # TODO hue
-                       'std r',
-                       'std g',
-                       'std b',
-                       'std',
-                       'transparency',
-                       'sharp edges']
-
     type_columns = []
     for group_name, group_ in CLOUD_TYPES.items():
         for type_name, type_ in group_.items():
@@ -77,7 +53,7 @@ class Classification:
         return list(probabilities)
 
     def __check_type(self, cloud_type: dict, cloud: np.array):
-        errors = [abs(value - cloud[self.feature_columns.index(key)])
+        errors = [abs(value - cloud[analysis_features.index(key)])
                   for key, value in cloud_type.items()]
         root_mean_squared_error = np.sqrt(np.mean(np.array(errors) ** 2))
         logging.debug(f'Root mean squared error of cloud type: '

@@ -240,7 +240,7 @@ class DataBase:
             'created mask': False,
             'created analysis': False,
             'created classification': False,
-            'created art': False,
+            'created paradolia': False,
             'compressed': False,
             'deleted': False,
             'quality': None
@@ -311,25 +311,25 @@ class DataBase:
 
         logger.info('Saved classification')
 
-    def save_art(self, art: dict, identifier: str):
-        logger.debug(f'Attempting to save art to {identifier}')
-        if not len(art):
+    def save_paradolia(self, paradolia: dict, identifier: str):
+        logger.debug(f'Attempting to save paradolia to {identifier}')
+        if not len(paradolia):
             logger.warning(
-                f'Art trying to save in {identifier} is empty')
+                f'Paradolia trying to save in {identifier} is empty')
         if identifier not in self.metadata['data']:
             raise ValueError('Identifier not in database')
 
         self.metadata['data'][identifier][
-            'created art'] = get_time()
+            'created paradolia'] = get_time()
 
-        with open(self.__get_path(identifier, 'art.json'), 'w') as f:
-            f.write(json.dumps(art, indent=4))
+        with open(self.__get_path(identifier, 'paradolia.json'), 'w') as f:
+            f.write(json.dumps(paradolia, indent=4))
 
         self.metadata['data'][identifier]['quality'] = self.__get_quality(
             identifier)
         self.__update_metadata()
 
-        logger.info('Saved art')
+        logger.info('Saved paradolia')
 
     def load_orig_by_id(self, identifier: str) -> np.ndarray:
         logger.debug(f'Attempting to load orig to {identifier}')
@@ -406,23 +406,23 @@ class DataBase:
         logger.info(f'Loaded mask by empty analysis from {identifier}')
         return mask, identifier
 
-    def load_mask_by_empty_art(self) -> Tuple[np.ndarray, str]:
-        logger.debug('Attempting to load mask by empty art')
+    def load_mask_by_empty_paradolia(self) -> Tuple[np.ndarray, str]:
+        logger.debug('Attempting to load mask by empty paradolia')
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created art'] and \
+                if not self.metadata['data'][img]['created paradolia'] and \
                         self.metadata['data'][identifier]['created mask']:
                     identifier = img
                     break
 
         if not identifier:
-            raise LookupError('No not artistically interpreted image in '
+            raise LookupError('No not paradoliaistically interpreted image in '
                               'database')
 
         mask = self.__load_img(identifier, 'mask.png')
-        logger.info(f'Loaded mask by empty art from {identifier}')
+        logger.info(f'Loaded mask by empty paradolia from {identifier}')
         return mask, identifier
 
     def load_analysis_by_id(self, identifier: str) -> pd.DataFrame:
@@ -474,18 +474,19 @@ class DataBase:
         logger.info(f'Loaded classification from {identifier}')
         return classification
 
-    def load_art_by_id(self, identifier: str) -> pd.DataFrame:
-        logger.debug(f'Attempting to load art from {identifier}')
+    def load_paradolia_by_id(self, identifier: str) -> pd.DataFrame:
+        logger.debug(f'Attempting to load paradolia from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
-        if not self.metadata['data'][identifier]['created art']:
+        if not self.metadata['data'][identifier]['created paradolia']:
             raise ValueError(
-                f'Identifier {identifier} does not contain an art')
+                f'Identifier {identifier} does not contain an paradolia')
 
-        with open(self.__get_path(identifier, 'art.json'), 'r') as art:
-            art = json.load(art)
+        with open(self.__get_path(identifier, 'paradolia.json'),
+                  'r') as paradolia:
+            paradolia = json.load(paradolia)
 
-        logger.info(f'Loaded art from {identifier}')
-        return art
+        logger.info(f'Loaded paradolia from {identifier}')
+        return paradolia
