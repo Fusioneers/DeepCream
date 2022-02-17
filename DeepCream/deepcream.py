@@ -62,6 +62,7 @@ class DeepCream:
         self.alive = False
 
     def __get_orig(self):
+        logger.info('started thread get_orig')
         while self.alive:
             logger.info('Take photo')
             # Returns a random (RGB) image (placeholder until real camera)
@@ -73,12 +74,15 @@ class DeepCream:
             self.orig_queue.put(orig)
 
     def __save_orig(self):
+        logger.info('Started thread save_orig')
         while self.alive:
-            orig = self.orig_queue.get()
-            with self.lock:
-                self.database.save_orig(orig)
+            if not self.orig_queue.empty():
+                orig = self.orig_queue.get()
+                with self.lock:
+                    self.database.save_orig(orig)
 
     def __get_mask(self):
+        logger.info('Started thread get_mask')
         while self.alive:
             with self.lock:
                 orig, identifier = self.database.load_orig_by_empty_mask()
@@ -87,12 +91,15 @@ class DeepCream:
             self.mask_queue.put((mask, identifier))
 
     def __save_mask(self):
+        logger.info('started thread save_mask')
         while self.alive:
-            mask, identifier = self.mask_queue.get()
-            with self.lock:
-                self.database.save_mask(mask, identifier)
+            if not self.mask_queue.empty():
+                mask, identifier = self.mask_queue.get()
+                with self.lock:
+                    self.database.save_mask(mask, identifier)
 
     def __get_analysis(self):
+        logger.info('Started thread get_analysis')
         while self.alive:
             with self.lock:
                 orig, identifier = self.database.load_orig_by_empty_analysis()
@@ -106,12 +113,15 @@ class DeepCream:
             self.analysis_queue.put(df)
 
     def __save_analysis(self):
+        logger.info('Started thread save_analysis')
         while self.alive:
-            analysis, identifier = self.analysis_queue.get()
-            with self.lock:
-                self.database.save_analysis(analysis, identifier)
+            if not self.analysis_queue.empty():
+                analysis, identifier = self.analysis_queue.get()
+                with self.lock:
+                    self.database.save_analysis(analysis, identifier)
 
     def __get_classification(self):
+        logger.info('Started thread get_classification')
         while self.alive:
             with self.lock:
                 analysis, identifier = \
@@ -122,12 +132,19 @@ class DeepCream:
 
     def __save_classification(self):
         while self.alive:
-            classification, identifier = self.classification_queue.get()
-            with self.lock:
-                self.database.save_classification(classification, identifier)
+            if not self.classification_queue.empty():
+                classification, identifier = self.classification_queue.get()
+                with self.lock:
+                    self.database.save_classification(classification,
+                                                      identifier)
 
     def __get_pareidolia(self):
-        pass
+        while self.alive:
+            pass
 
     def __save_pareidolia(self):
-        pass
+        while self.alive:
+            if not self.paradolia_queue.empty():
+                pareidolia, identifier = self.paradolia_queue.get()
+                with self.lock:
+                    self.database.save_paradolia(pareidolia, identifier)
