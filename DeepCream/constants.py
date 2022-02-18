@@ -19,7 +19,7 @@ FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(funcName)s: ' \
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '
 
-CONSOLE_LOGGING_LEVEL = logging.WARNING
+CONSOLE_LOGGING_LEVEL = logging.DEBUG
 
 log_time = get_time()
 LOG_DIR = os.path.normpath(os.path.join(ABS_PATH, 'logs'))
@@ -55,4 +55,5 @@ analysis_features = ['center x',
                      'transparency',
                      'sharp edges']
 
-queue_max_size = 200
+QUEUE_MAX_SIZE = 200
+DEFAULT_DELAY = 0.1

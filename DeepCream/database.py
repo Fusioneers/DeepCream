@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import Tuple
+from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
@@ -240,7 +240,7 @@ class DataBase:
             'created mask': False,
             'created analysis': False,
             'created classification': False,
-            'created paradolia': False,
+            'created pareidolia': False,
             'compressed': False,
             'deleted': False,
             'quality': None
@@ -311,28 +311,28 @@ class DataBase:
 
         logger.info('Saved classification')
 
-    def save_paradolia(self, paradolia: dict, identifier: str):
-        logger.debug(f'Attempting to save paradolia to {identifier}')
-        if not len(paradolia):
+    def save_pareidolia(self, pareidolia: dict, identifier: str):
+        logger.debug(f'Attempting to save pareidolia to {identifier}')
+        if not len(pareidolia):
             logger.warning(
-                f'Paradolia trying to save in {identifier} is empty')
+                f'Pareidolia trying to save in {identifier} is empty')
         if identifier not in self.metadata['data']:
             raise ValueError('Identifier not in database')
 
         self.metadata['data'][identifier][
-            'created paradolia'] = get_time()
+            'created pareidolia'] = get_time()
 
-        with open(self.__get_path(identifier, 'paradolia.json'), 'w') as f:
-            f.write(json.dumps(paradolia, indent=4))
+        with open(self.__get_path(identifier, 'pareidolia.json'), 'w') as f:
+            f.write(json.dumps(pareidolia, indent=4))
 
         self.metadata['data'][identifier]['quality'] = self.__get_quality(
             identifier)
         self.__update_metadata()
 
-        logger.info('Saved paradolia')
+        logger.info('Saved pareidolia')
 
-    def load_orig_by_id(self, identifier: str) -> np.ndarray:
-        logger.debug(f'Attempting to load orig to {identifier}')
+    def load_orig(self, identifier: str) -> np.ndarray:
+        logger.debug(f'Attempting to load orig from {identifier}')
         if identifier not in self.metadata['data']:
             raise ValueError(
                 f'Identifier {identifier} not available in database')
@@ -341,25 +341,17 @@ class DataBase:
         logger.info(f'Loaded orig from {identifier}')
         return orig
 
-    def load_orig_by_empty_mask(self) -> Tuple[np.ndarray, str]:
-        logger.debug('Attempting to load orig by empty mask')
+    def load_orig_id_by_empty_mask(self) -> str:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created mask']:
-                    identifier = img
-                    break
+            if not self.metadata['data'][img]['created mask']:
+                identifier = img
+                break
 
-        if not identifier:
-            raise LookupError('No not masked image in database')
+        return identifier
 
-        orig = self.__load_img(identifier, 'orig.png')
-        logger.info(f'Loaded orig by empty mask from {identifier}')
-        return orig, identifier
-
-    def load_orig_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
-        logger.debug('Attempting to load orig by empty analysis')
+    def load_orig_id_by_empty_analysis(self) -> Optional[str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
@@ -368,64 +360,48 @@ class DataBase:
                     identifier = img
                     break
 
-        if not identifier:
-            raise LookupError('No not analysed image in database')
+        return identifier
 
-        orig = self.__load_img(identifier, 'orig.png')
-        logger.info(f'Loaded orig by empty analysis from {identifier}')
-        return orig, identifier
-
-    def load_mask_by_id(self, identifier: str) -> np.ndarray:
+    def load_mask(self, identifier: str) -> np.ndarray:
         logger.debug(f'Attempting to load mask from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
-            raise ValueError('Identifier not available in database')
+            raise ValueError(
+                f'Identifier {identifier} not available in database')
 
         if not self.metadata['data'][identifier]['created mask']:
-            raise ValueError('Identifier does not contain a mask')
+            raise ValueError(
+                f'Identifier {identifier}  does not contain a mask')
 
         mask = self.__load_img(identifier, 'mask.png')
         logger.info(f'Loaded mask from {identifier}')
         return mask
 
-    def load_mask_by_empty_analysis(self) -> Tuple[np.ndarray, str]:
-        logger.debug('Attempting to load mask by empty analysis')
+    def load_mask_id_by_empty_analysis(self) -> Optional[str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created analysis'] and \
-                        self.metadata['data'][identifier]['created mask']:
+                        self.metadata['data'][img]['created mask']:
                     identifier = img
                     break
 
-        if not identifier:
-            raise LookupError('No not analysed image in database')
+        return identifier
 
-        mask = self.__load_img(identifier, 'mask.png')
-        logger.info(f'Loaded mask by empty analysis from {identifier}')
-        return mask, identifier
-
-    def load_mask_by_empty_paradolia(self) -> Tuple[np.ndarray, str]:
-        logger.debug('Attempting to load mask by empty paradolia')
+    def load_mask_id_by_empty_pareidolia(self) -> Optional[str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
             if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created paradolia'] and \
-                        self.metadata['data'][identifier]['created mask']:
+                if not self.metadata['data'][img]['created pareidolia'] and \
+                        self.metadata['data'][img]['created mask']:
                     identifier = img
                     break
 
-        if not identifier:
-            raise LookupError('No not paradoliaistically interpreted image in '
-                              'database')
+        return identifier
 
-        mask = self.__load_img(identifier, 'mask.png')
-        logger.info(f'Loaded mask by empty paradolia from {identifier}')
-        return mask, identifier
-
-    def load_analysis_by_id(self, identifier: str) -> pd.DataFrame:
+    def load_analysis(self, identifier: str) -> pd.DataFrame:
         logger.debug(f'Attempting to load analysis from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
@@ -439,27 +415,20 @@ class DataBase:
         logger.info(f'Loaded analysis from {identifier}')
         return analysis
 
-    def load_analysis_by_empty_classification(self) \
-            -> Tuple[pd.DataFrame, str]:
-        logger.debug('Attempting to load analysis by empty classification')
+    def load_analysis_id_by_empty_classification(self) \
+            -> Optional[str]:
         identifier = None
         for img in range(1, len(self.metadata['data']) + 1):
             img = str(img)
             if img in self.metadata['data']:
                 if not self.metadata['data'][img]['created classification']:
-                    if self.metadata['data'][identifier]['created analysis']:
+                    if self.metadata['data'][img]['created analysis']:
                         identifier = img
                         break
 
-        if not identifier:
-            raise LookupError('No not classified image in database')
+        return identifier
 
-        analysis = pd.read_csv(self.__get_path(identifier, 'orig.png'))
-        logger.info(
-            f'Loaded analysis by empty classification from {identifier}')
-        return analysis, identifier
-
-    def load_classification_by_id(self, identifier: str) -> pd.DataFrame:
+    def load_classification(self, identifier: str) -> pd.DataFrame:
         logger.debug(f'Attempting to load classification from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
@@ -474,19 +443,19 @@ class DataBase:
         logger.info(f'Loaded classification from {identifier}')
         return classification
 
-    def load_paradolia_by_id(self, identifier: str) -> pd.DataFrame:
-        logger.debug(f'Attempting to load paradolia from {identifier}')
+    def load_pareidolia(self, identifier: str) -> pd.DataFrame:
+        logger.debug(f'Attempting to load pareidolia from {identifier}')
         if identifier not in self.metadata['data']:
             logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
-        if not self.metadata['data'][identifier]['created paradolia']:
+        if not self.metadata['data'][identifier]['created pareidolia']:
             raise ValueError(
-                f'Identifier {identifier} does not contain an paradolia')
+                f'Identifier {identifier} does not contain an pareidolia')
 
-        with open(self.__get_path(identifier, 'paradolia.json'),
-                  'r') as paradolia:
-            paradolia = json.load(paradolia)
+        with open(self.__get_path(identifier, 'pareidolia.json'),
+                  'r') as pareidolia:
+            pareidolia = json.load(pareidolia)
 
-        logger.info(f'Loaded paradolia from {identifier}')
-        return paradolia
+        logger.info(f'Loaded pareidolia from {identifier}')
+        return pareidolia

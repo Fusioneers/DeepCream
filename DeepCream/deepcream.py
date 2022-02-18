@@ -2,7 +2,7 @@ import logging
 import os
 import random
 import threading as th
-import time
+import time as t
 from queue import Queue
 
 import cv2
@@ -10,7 +10,12 @@ import cv2
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
-from DeepCream.constants import ABS_PATH, queue_max_size
+from DeepCream.constants import (DEBUG_MODE,
+                                 ABS_PATH,
+                                 QUEUE_MAX_SIZE,
+                                 get_time,
+                                 DEFAULT_DELAY,
+                                 )
 from DeepCream.database import DataBase
 
 logger = logging.getLogger('DeepCream.deepcream')
@@ -21,6 +26,7 @@ max_border_proportion = 1
 
 class DeepCream:
     def __init__(self, directory: str, tpu_support: bool):
+        logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
         self.alive = True
@@ -28,43 +34,82 @@ class DeepCream:
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
         self.classification = Classification()
-        self.database = DataBase(os.path.join(ABS_PATH, 'database'))
+        if DEBUG_MODE:
+            self.database = DataBase(
+                # os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
+                os.path.join(ABS_PATH, 'data', 'database 2022-02-18 18-05-52'))
+        else:
+            self.database = DataBase(
+                os.path.join(ABS_PATH, 'data', 'database'))
 
-        self.orig_queue = Queue(maxsize=queue_max_size)
-        self.mask_queue = Queue(maxsize=queue_max_size)
-        self.analysis_queue = Queue(maxsize=queue_max_size)
-        self.classification_queue = Queue(maxsize=queue_max_size)
-        self.paradolia_queue = Queue(maxsize=queue_max_size)
+        self.orig_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+        self.mask_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+        self.analysis_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+        self.classification_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+        self.pareidolia_queue = Queue(maxsize=QUEUE_MAX_SIZE)
+        logger.debug('Initialised queues')
 
-        self.__th_get_orig = th.Thread(target=self.__get_orig(), daemon=True)
-        self.__th_get_mask = th.Thread(target=self.__get_mask(), daemon=True)
-        self.__th_get_analysis = th.Thread(target=self.__get_analysis(),
+        self.__th_get_orig = th.Thread(target=self.__get_orig, daemon=True)
+        self.__th_get_mask = th.Thread(target=self.__get_mask, daemon=True)
+        self.__th_get_analysis = th.Thread(target=self.__get_analysis,
                                            daemon=True)
         self.__th_get_classification = th.Thread(
-            target=self.__get_classification(), daemon=True)
-        self.__th_get_paradolia = th.Thread(target=self.__get_pareidolia(),
+            target=self.__get_classification, daemon=True)
+        self.__th_get_pareidolia = th.Thread(target=self.__get_pareidolia,
+                                             daemon=True)
+
+        self.__th_save_orig = th.Thread(target=self.__save_orig, daemon=True)
+        self.__th_save_mask = th.Thread(target=self.__save_mask, daemon=True)
+        self.__th_save_analysis = th.Thread(target=self.__save_analysis,
                                             daemon=True)
+        self.__th_save_classification = th.Thread(
+            target=self.__save_classification, daemon=True)
+        self.__th_save_pareidolia = th.Thread(target=self.__save_pareidolia,
+                                              daemon=True)
+        logger.debug('Initialised threads')
+
+        self.__th_get_orig.name = 'Get_orig'
+        self.__th_get_mask.name = 'Get_mask'
+        self.__th_get_analysis.name = 'Get_analysis'
+        self.__th_get_classification.name = 'Get_classification'
+        self.__th_get_pareidolia.name = 'Get_pareidolia'
+
+        self.__th_save_orig.name = 'Save_orig'
+        self.__th_save_mask.name = 'Save_mask'
+        self.__th_save_analysis.name = 'Save_analysis'
+        self.__th_save_classification.name = 'Save_classification'
+        self.__th_save_pareidolia.name = 'Save_pareidolia'
+
+        logger.info('Initialisation of DeepCream finished')
 
     def run(self, allowed_execution_time: int):
-        print(allowed_execution_time)
+        logger.debug('Attempting to start running')
 
-        start_time = time.time()
+        start_time = t.time()
 
         self.__th_get_orig.start()
         self.__th_get_mask.start()
         self.__th_get_analysis.start()
         self.__th_get_classification.start()
-        self.__th_get_paradolia.start()
+        self.__th_get_pareidolia.start()
 
-        while int(time.time() - start_time) < allowed_execution_time:
+        self.__th_save_orig.start()
+        self.__th_save_mask.start()
+        self.__th_save_analysis.start()
+        self.__th_save_classification.start()
+        self.__th_save_pareidolia.start()
+        logger.debug('Started threads')
+
+        while int(t.time() - start_time) < allowed_execution_time:
             # TODO add variable delay in threads to balance queues
-            time.sleep(1)
+            t.sleep(DEFAULT_DELAY)
         self.alive = False
+        logger.info('Finished running')
 
     def __get_orig(self):
-        logger.info('started thread get_orig')
+        logger.info('Started thread get_orig')
         while self.alive:
-            logger.info('Take photo')
+            t.sleep(15)
             # Returns a random (RGB) image (placeholder until real camera)
             random_file_name = random.choice(os.listdir(self.directory))
             orig = cv2.cvtColor(
@@ -72,6 +117,7 @@ class DeepCream:
                 cv2.COLOR_BGR2RGB)
 
             self.orig_queue.put(orig)
+            logger.debug('Got orig')
 
     def __save_orig(self):
         logger.info('Started thread save_orig')
@@ -80,37 +126,53 @@ class DeepCream:
                 orig = self.orig_queue.get()
                 with self.lock:
                     self.database.save_orig(orig)
+        logger.info('Finished thread save_orig')
 
     def __get_mask(self):
         logger.info('Started thread get_mask')
         while self.alive:
             with self.lock:
-                orig, identifier = self.database.load_orig_by_empty_mask()
+                identifier = self.database.load_orig_id_by_empty_mask()
+            if identifier is not None:
+                with self.lock:
+                    orig = self.database.load_orig(identifier)
+                mask = self.cloud_detection.evaluate_image(orig).astype(
+                    'uint8') * 255
+                self.mask_queue.put((mask, identifier))
 
-            mask = self.cloud_detection.evaluate_image(orig)
-            self.mask_queue.put((mask, identifier))
+        logger.info('Finished thread get_mask')
 
     def __save_mask(self):
-        logger.info('started thread save_mask')
+        logger.info('Started thread save_mask')
         while self.alive:
             if not self.mask_queue.empty():
                 mask, identifier = self.mask_queue.get()
                 with self.lock:
                     self.database.save_mask(mask, identifier)
+                logger.debug(f'Saved mask to {identifier}')
+        logger.info('Finished thread save_mask')
 
     def __get_analysis(self):
         logger.info('Started thread get_analysis')
         while self.alive:
             with self.lock:
-                orig, identifier = self.database.load_orig_by_empty_analysis()
+                identifier = self.database.load_orig_id_by_empty_analysis()
+            if identifier is not None:
+                with self.lock:
+                    orig = self.database.load_orig(identifier)
+                try:
+                    with self.lock:
+                        mask = self.database.load_mask(identifier)
 
-            with self.lock:
-                mask = self.database.load_mask_by_id(identifier)
+                    analysis = Analysis(orig, mask, max_num_clouds,
+                                        max_border_proportion)
+                    df = analysis.evaluate()
+                    self.analysis_queue.put((df, identifier))
 
-            analysis = Analysis(orig, mask, max_num_clouds,
-                                max_border_proportion)
-            df = analysis.evaluate()
-            self.analysis_queue.put(df)
+                except ValueError as err:
+                    logger.error(err)
+
+    logger.info('Finished thread get_analysis')
 
     def __save_analysis(self):
         logger.info('Started thread save_analysis')
@@ -119,32 +181,44 @@ class DeepCream:
                 analysis, identifier = self.analysis_queue.get()
                 with self.lock:
                     self.database.save_analysis(analysis, identifier)
+        logger.info('Finished thread save_analysis')
 
     def __get_classification(self):
         logger.info('Started thread get_classification')
         while self.alive:
             with self.lock:
-                analysis, identifier = \
-                    self.database.load_analysis_by_empty_classification()
+                identifier = self.database. \
+                    load_analysis_id_by_empty_classification()
+            if identifier is not None:
+                with self.lock:
+                    analysis = self.database.load_analysis(identifier)
+                classification = self.classification.get_classification(
+                    analysis)
+                self.classification_queue.put((classification, identifier))
 
-            classification = self.classification.get_classification(analysis)
-            self.classification_queue.put(classification)
+        logger.info('Finished thread get_classification')
 
     def __save_classification(self):
+        logger.info('Started thread save_classification')
         while self.alive:
             if not self.classification_queue.empty():
                 classification, identifier = self.classification_queue.get()
                 with self.lock:
                     self.database.save_classification(classification,
                                                       identifier)
+        logger.info('Finished thread save_classification')
 
     def __get_pareidolia(self):
+        logger.info('Started thread get_pareidolia')
         while self.alive:
-            pass
+            t.sleep(DEFAULT_DELAY)
+        logger.info('Finished thread get_pareidolia')
 
     def __save_pareidolia(self):
+        logger.info('Started thread save_pareidolia')
         while self.alive:
-            if not self.paradolia_queue.empty():
-                pareidolia, identifier = self.paradolia_queue.get()
+            if not self.pareidolia_queue.empty():
+                pareidolia, identifier = self.pareidolia_queue.get()
                 with self.lock:
-                    self.database.save_paradolia(pareidolia, identifier)
+                    self.database.save_pareidolia(pareidolia, identifier)
+        logger.info('Finished thread save_pareidolia')

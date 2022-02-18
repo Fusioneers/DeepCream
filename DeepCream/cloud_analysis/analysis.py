@@ -117,6 +117,8 @@ class Analysis:
         self.height, self.width, _ = self.orig.shape
 
         self.mask = cv.resize(mask, (self.width, self.height))
+        if len(self.mask.shape) == 3:
+            self.mask = self.mask[:, :, 0]
         logger.debug('Resized mask')
 
         if not np.any(self.mask):
