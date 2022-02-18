@@ -105,6 +105,19 @@ class DeepCream:
         self.alive = False
         logger.info('Finished running')
 
+    def __review_photo(self, image: np.ndarray) -> bool:
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+        # TODO find ideal values
+        if cv2.mean(gray)[0] < 20 or cv2.mean(gray)[0] > 150:
+            return False
+
+        # TODO take the average of the four corners (bigger than 1px)
+        if gray[0][0] > 20:
+            return False
+
+        return True
+
     def __get_orig(self):
         logger.info('Started thread get_orig')
         while self.alive:
