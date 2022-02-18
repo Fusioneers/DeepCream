@@ -4,8 +4,6 @@ import traceback
 
 import cv2 as cv
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
 from DeepCream.classification.classification import Classification
@@ -13,7 +11,6 @@ from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
 from DeepCream.constants import (DEBUG_MODE,
                                  ABS_PATH,
-                                 DEFAULT_BORDER_WIDTH,
                                  get_time,
                                  )
 from DeepCream.database import DataBase
@@ -44,7 +41,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         analysis = Analysis(img, mask, 10, 1).evaluate()
 
-        database.save_analysis(df, identifier)
+        database.save_analysis(analysis, identifier)
 
         classification_ = classification.evaluate(df)
         database.save_classification(classification_, identifier)

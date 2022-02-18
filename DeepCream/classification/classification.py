@@ -35,9 +35,7 @@ class Classification:
     type_columns = []
     for group_name, group_ in CLOUD_TYPES.items():
         for type_name, type_ in group_.items():
-            for sub_type_name, sub_type in type_.items():
-                type_columns.append(
-                    ': '.join([group_name, type_name, sub_type_name]))
+            type_columns.append(': '.join([group_name, type_name]))
 
     def __init__(self):
         self.__scaler = joblib.load(
@@ -96,8 +94,7 @@ class Classification:
         errors = []
         for group in CLOUD_TYPES.values():
             for type_ in group.values():
-                for subtype in type_.values():
-                    errors.append(self.__check_type(subtype, cloud))
+                errors.append(self.__check_type(type_, cloud))
 
         errors = np.array(errors)
 
