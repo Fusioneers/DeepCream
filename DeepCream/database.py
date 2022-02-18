@@ -20,7 +20,6 @@ logger = logging.getLogger('DeepCream.database')
 logger.info('Initialised database')
 
 
-# TODO docstrings
 class DataBase:
 
     def __init__(self, directory):
@@ -161,7 +160,6 @@ class DataBase:
         not_deleted = [key for key, value in self.metadata['data'].items() if
                        value['quality'] and not value['deleted']]
 
-        # TODO this case
         if not not_deleted:
             logger.critical(
                 'There are no evaluated and not yet deleted images available')

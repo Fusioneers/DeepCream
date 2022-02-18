@@ -36,8 +36,7 @@ class DeepCream:
         self.classification = Classification()
         if DEBUG_MODE:
             self.database = DataBase(
-                # os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
-                os.path.join(ABS_PATH, 'data', 'database 2022-02-18 18-05-52'))
+                os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
         else:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', 'database'))
@@ -184,7 +183,7 @@ class DeepCream:
         logger.info('Finished thread save_analysis')
 
     def __get_classification(self):
-        logger.info('Started thread get_classification')
+        logger.info('Started thread evaluate')
         while self.alive:
             with self.lock:
                 identifier = self.database. \
@@ -192,11 +191,11 @@ class DeepCream:
             if identifier is not None:
                 with self.lock:
                     analysis = self.database.load_analysis(identifier)
-                classification = self.classification.get_classification(
+                classification = self.classification.evaluate(
                     analysis)
                 self.classification_queue.put((classification, identifier))
 
-        logger.info('Finished thread get_classification')
+        logger.info('Finished thread evaluate')
 
     def __save_classification(self):
         logger.info('Started thread save_classification')

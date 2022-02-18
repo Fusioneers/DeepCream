@@ -12,9 +12,6 @@ from DeepCream.constants import ABS_PATH
 path = os.path.normpath(
     os.path.join(ABS_PATH, 'data/Data/zz_astropi_1_photo_364.jpg'))
 
-# TODO test whether the values are meaningful
-# TODO test the performance
-
 cloud_filter = CloudFilter()
 mask, _ = cloud_filter.evaluate_image(Image.open(path))
 

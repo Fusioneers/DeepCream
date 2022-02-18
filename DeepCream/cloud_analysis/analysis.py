@@ -16,10 +16,8 @@ properties such as convexity or transparency can be read off.
 
     max_number_of_clouds = 10
     analysis = Analysis(image, mask, max_number_of_clouds)
-
-    print(f'Convexity: {analysis.clouds[0].convexity()}')
-    print(f'Transparency: {analysis.clouds[0].transparency()}')
     cv.imshow(analysis.clouds[0].img)
+    data = analysis.evaluate()
 """
 import logging
 
@@ -39,7 +37,7 @@ logger.info('Started DeepCream/cloud_analysis/analysis.py')
 
 
 class Analysis:
-    """A class for analysing clouds in an image taken with the AstroPi.
+    """A class for analysing clouds in an image taken with the AstroPi
 
         This class creates a number of clouds from an image given at its
         initialisation. These are objects containing multiple attributes and
@@ -73,13 +71,13 @@ class Analysis:
             A list of cloud objects resembling each a cloud in the image.
     """
 
-    def __init__(self,
-                 orig: np.ndarray,
-                 mask: np.ndarray,
-                 max_num_clouds: int,
-                 max_border_proportion: float,
-                 border_width: int = DEFAULT_BORDER_WIDTH,
-                 val_threshold: float = DEFAULT_VAL_THRESHOLD):
+    def _init__(self,
+                orig: np.ndarray,
+                mask: np.ndarray,
+                max_num_clouds: int,
+                max_border_proportion: float,
+                border_width: int = DEFAULT_BORDER_WIDTH,
+                val_threshold: float = DEFAULT_VAL_THRESHOLD):
         """Initialises Analysis.
 
         Args:
@@ -137,7 +135,7 @@ class Analysis:
                                             val_threshold)
             logger.info(f'Created {len(self.clouds)} clouds')
 
-    def __get_contours(self):
+    def __get_contours(self) -> list[np.ndarray]:
         """Gets the contours of the clouds.
 
         Returns:
@@ -154,7 +152,6 @@ class Analysis:
 
         return contours
 
-    # TODO Test this function
     def __get_clouds(self,
                      contours: list,
                      max_num_clouds: int,
@@ -209,7 +206,6 @@ class Analysis:
                             key=lambda cloud:
                             getattr(cloud, 'contour_area'), reverse=True)
 
-        # TODO test this
         def check_valid(cloud):
             edges = cloud.edges(border_width, border_width, convex_hull=True)
             if not edges.size:
@@ -230,7 +226,6 @@ class Analysis:
                 clouds = all_clouds[:max_num_clouds]
                 logger.debug('Filtered clouds by size')
         else:
-            # TODO test this
             clouds = []
             for cloud in all_clouds:
                 if len(clouds) >= max_num_clouds:
@@ -246,6 +241,7 @@ class Analysis:
         return clouds
 
     def evaluate(self) -> pd.DataFrame:
+        """Returns a Dataframe containing properties for each cloud"""
         df = pd.DataFrame(columns=analysis_features)
 
         for j, cloud in enumerate(self.clouds):
@@ -373,41 +369,30 @@ class Analysis:
             self.hull_area = cv.contourArea(self.hull)
 
         def roundness(self) -> float:
-            """Gets the roundness of the cloud."""
-
             return (4 * np.pi * self.contour_area) / (
                     self.hull_perimeter ** 2)
 
         def convexity(self) -> float:
-            """Gets the convexity of the cloud."""
-
             return self.hull_perimeter / self.contour_perimeter
 
         def compactness(self) -> float:
-            """Gets the compactness of the cloud."""
-
             return (4 * np.pi * self.contour_area) / (
                     self.contour_perimeter ** 2)
 
         def solidity(self) -> float:
-            """Gets the solidity of the cloud."""
-
             return self.contour_area / self.hull_area
 
         def rectangularity(self) -> float:
-            """Gets the rectangularity of the cloud."""
-
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return self.contour_area / (width * height)
 
         def elongation(self) -> float:
-            """Gets the elongation of the cloud."""
-
             _, (width, height), angle = cv.minAreaRect(self.contour)
             return min(width, height) / max(width, height)
 
         def mean(self) -> np.ndarray:
             """Gets the mean of each channel inside the cloud"""
+
             mean = cv.mean(self.img, mask=self.mask)
             return np.array(mean[:3])
 
@@ -441,7 +426,6 @@ class Analysis:
             out = 255 - out
             return out
 
-        # TODO docstring usage example
         def edges(self,
                   in_steps: int,
                   out_steps: int,

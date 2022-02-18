@@ -46,7 +46,7 @@ for i, path in tqdm(enumerate(os.scandir(input_dir)), total=num_img):
 
         database.save_analysis(df, identifier)
 
-        classification_ = classification.get_classification(df)
+        classification_ = classification.evaluate(df)
         database.save_classification(classification_, identifier)
 
         if DEBUG_MODE:

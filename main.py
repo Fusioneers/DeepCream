@@ -11,7 +11,6 @@ start_time = time.time()
 logger = logging.getLogger('DeepCream.main')
 
 finished = False
-# TODO convert to seconds
 runtime = 3600  # time the program is allowed to run (in hours)
 
 while int(time.time() - start_time) < runtime and not finished:
