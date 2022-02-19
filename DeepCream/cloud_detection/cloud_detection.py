@@ -117,7 +117,7 @@ class CloudDetection:
         if scaled is None:
             logger.error('Image was not loaded properly')
             raise ValueError('Image was not loaded properly')
-        elif scaled.shape != (None, self.HEIGHT, self.WIDTH, 1):
+        elif scaled.shape != (self.HEIGHT, self.WIDTH, 3):
             logger.error('Image has wrong dimensions')
             raise ValueError('Image has wrong dimensions')
 

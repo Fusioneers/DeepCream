@@ -5,6 +5,7 @@ import threading as th
 import time as t
 from queue import Queue
 
+import numpy as np
 import cv2
 
 from DeepCream.classification.classification import Classification
@@ -167,6 +168,7 @@ class DeepCream:
     def __get_analysis(self):
         logger.info('Started thread get_analysis')
         while self.alive:
+            t.sleep(DEFAULT_DELAY)
             with self.lock:
                 identifier = self.database.load_orig_id_by_empty_analysis()
             if identifier is not None:
@@ -198,6 +200,7 @@ class DeepCream:
     def __get_classification(self):
         logger.info('Started thread evaluate')
         while self.alive:
+            t.sleep(DEFAULT_DELAY)
             with self.lock:
                 identifier = self.database. \
                     load_analysis_id_by_empty_classification()

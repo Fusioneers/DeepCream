@@ -71,13 +71,13 @@ class Analysis:
             A list of cloud objects resembling each a cloud in the image.
     """
 
-    def _init__(self,
-                orig: np.ndarray,
-                mask: np.ndarray,
-                max_num_clouds: int,
-                max_border_proportion: float,
-                border_width: int = DEFAULT_BORDER_WIDTH,
-                val_threshold: float = DEFAULT_VAL_THRESHOLD):
+    def __init__(self,
+                 orig: np.ndarray,
+                 mask: np.ndarray,
+                 max_num_clouds: int,
+                 max_border_proportion: float,
+                 border_width: int = DEFAULT_BORDER_WIDTH,
+                 val_threshold: float = DEFAULT_VAL_THRESHOLD):
         """Initialises Analysis.
 
         Args:

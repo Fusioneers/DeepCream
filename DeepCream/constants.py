@@ -13,7 +13,7 @@ def get_time() -> str:
     return datetime.today().strftime(TIME_FORMAT)
 
 
-FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(funcName)s: ' \
+FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(threadName)s: %(funcName)s: ' \
                       'line %(lineno)d: %(levelname)s: %(message)s'
 
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
@@ -33,7 +33,7 @@ DEFAULT_VAL_THRESHOLD = 30
 
 QUALITY_THRESHOLD = 0.2
 # TODO Ich glaube die Berechnung stimmt nicht mehr, da man heute mit 10er Potenzen rechent ...
-MAX_DATABASE_SIZE = 1000 * ((2 ** 10) ** 2) *2
+MAX_DATABASE_SIZE = 1000 * ((2 ** 10) ** 2) * 2
 
 analysis_features = ['center x',
                      'center y',

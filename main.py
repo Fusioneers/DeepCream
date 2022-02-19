@@ -26,9 +26,11 @@ while int(time.time() - start_time) < runtime and not finished:
                     f'of execution time')
         deepcream.run(allowed_execution_time)
         finished = True
-        logger.info('DeepCream execution time: ' + str(int(time.time() - start_time)) + 's')
+        logger.info('DeepCream execution time: ' + str(
+            int(time.time() - start_time)) + 's')
     except MemoryError as err:
-        logger.critical('Stopping execution because database ran out of memory')
+        logger.critical(
+            'Stopping execution because database ran out of memory')
         finished = True
         logger.info(
             f'DeepCream execution time: {int(time.time() - start_time)}s')
