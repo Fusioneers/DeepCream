@@ -5,6 +5,7 @@ import threading as th
 import time as t
 from queue import Queue
 
+import numpy as np
 import cv2
 
 from DeepCream.classification.classification import Classification
@@ -25,12 +26,25 @@ max_border_proportion = 1
 
 
 class DeepCream:
-    def __init__(self, directory: str, tpu_support: bool):
+    def __init__(self, directory: str, tpu_support: bool = False, pi_camera: bool = False, capture_resolution=(2560, 1920)):
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
         self.alive = True
         self.lock = th.Lock()
+
+        if pi_camera:
+            try:
+                from picamera import PiCamera
+                self.camera = PiCamera()
+                self.camera.resolution = capture_resolution
+                self.camera.framerate = 15
+            except Exception as e:
+                logger.error('Camera not configured: ', str(e))
+                raise ValueError('Camera not configured')
+        else:
+            self.camera = None
+        self.capture_resolution = capture_resolution
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
         self.classification = Classification()
@@ -41,6 +55,8 @@ class DeepCream:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', 'database'))
 
+
+        # TODO __review_photo is missing from the threads?
         self.orig_review_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.orig_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.mask_queue = Queue(maxsize=QUEUE_MAX_SIZE)
@@ -110,11 +126,15 @@ class DeepCream:
         logger.info('Started thread get_orig')
         while self.alive:
             t.sleep(15)
-            # Returns a random (RGB) image (placeholder until real camera)
-            random_file_name = random.choice(os.listdir(self.directory))
-            orig = cv2.cvtColor(
-                cv2.imread(os.path.join(self.directory, random_file_name)),
-                cv2.COLOR_BGR2RGB)
+            if self.camera:
+                orig = np.empty((self.capture_resolution[1], self.capture_resolution[0], 3), dtype=np.uint8)
+                self.camera.capture(orig, 'rgb')
+            else:
+                # Returns a random (RGB) image (placeholder until real camera)
+                random_file_name = random.choice(os.listdir(self.directory))
+                orig = cv2.cvtColor(
+                    cv2.imread(os.path.join(self.directory, random_file_name)),
+                    cv2.COLOR_BGR2RGB)
 
             self.orig_queue.put(orig)
             logger.debug('Got orig')

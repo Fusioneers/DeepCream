@@ -11,7 +11,7 @@ start_time = time.time()
 logger = logging.getLogger('DeepCream.main')
 
 finished = False
-runtime = 3600  # time the program is allowed to run (in hours)
+runtime = 180  # time the program is allowed to run (in seconds)
 
 while int(time.time() - start_time) < runtime and not finished:
     # Makes sure the DeepCream module keeps running for the whole time
@@ -34,9 +34,9 @@ while int(time.time() - start_time) < runtime and not finished:
         finished = True
         logger.info(
             f'DeepCream execution time: {int(time.time() - start_time)}s')
-    except KeyboardInterrupt as err:
-        raise err
-    except Exception as err:
+    except KeyboardInterrupt as e:
+        raise e
+    except Exception as e:
         logger.error(traceback.format_exc())
 
 end_time = time.time()
