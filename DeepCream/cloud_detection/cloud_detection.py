@@ -2,7 +2,7 @@ import logging
 import os.path
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 import tensorflow as tf
 from numpy import asarray
 
@@ -51,7 +51,7 @@ class CloudDetection:
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
 
-    def __load_image(self, image: np.ndarray):
+    def __load_image(self, image: np.ndarray) -> np.ndarray:
 
         """
 
@@ -66,14 +66,15 @@ class CloudDetection:
         """
 
         scaled = Image.fromarray(image)
-        scaled.thumbnail((self.WIDTH, self.HEIGHT))
+        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT), Image.ANTIALIAS)
+        # scaled.thumbnail((self.WIDTH, self.HEIGHT))
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
         scaled /= 255.0
 
         return scaled
 
-    def __ai_generate_image_mask(self, image):
+    def __ai_generate_image_mask(self, image: np.ndarray) -> np.ndarray:
 
         """
 
@@ -94,13 +95,13 @@ class CloudDetection:
             return mask[0]
         elif self.interpreter is not None:
             self.interpreter.set_tensor(
-                self.input_details[0]['index'], image)
+                self.input_details[0]['index'], np.asarray([image]))
             self.interpreter.invoke()
-            return self.interpreter.get_tensor(self.output_details[0]['index'])
+            return self.interpreter.get_tensor(self.output_details[0]['index'])[0]
         else:
             raise ValueError('No AI was configured')
 
-    def evaluate_image(self, image) -> np.ndarray:
+    def evaluate_image(self, image: np.ndarray) -> np.ndarray:
 
         """
 
@@ -123,6 +124,8 @@ class CloudDetection:
 
         # Compute the mask
         mask = self.__ai_generate_image_mask(scaled)
+
+        print(mask.shape)
 
         # Make the result binary
         _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,

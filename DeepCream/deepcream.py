@@ -7,6 +7,7 @@ from queue import Queue
 
 import cv2 as cv
 import numpy as np
+import cv2
 
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
@@ -213,8 +214,7 @@ class DeepCream:
     def __get_orig(self):
         if self.camera:
             orig = np.empty(
-                (self.capture_resolution[1], self.capture_resolution[0], 3),
-                dtype=np.uint8)
+                (self.capture_resolution[1], self.capture_resolution[0], 3))
             self.camera.capture(orig, 'rgb')
         else:
             # Returns a random (RGB) image (placeholder until real camera)
@@ -229,6 +229,7 @@ class DeepCream:
     @thread('review_orig')
     def __review_orig(self):
         if not self.orig_review_queue.empty():
+            logger.debug('Reviewing orig image')
             orig = self.orig_review_queue.get()
             gray = cv.cvtColor(orig, cv.COLOR_RGB2GRAY)
 

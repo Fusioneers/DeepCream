@@ -38,5 +38,6 @@ logger.addHandler(console_handler)
 logger.info('Initialised logger')
 
 
-def initialize(directory, tpu_support=False):
-    return DeepCreamClass(directory, tpu_support)
+def initialize(directory, tpu_support: bool = False,
+               pi_camera: bool = False, capture_resolution=(2560, 1920)):
+    return DeepCreamClass(directory, tpu_support, pi_camera, capture_resolution)

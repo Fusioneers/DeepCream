@@ -11,14 +11,14 @@ start_time = time.time()
 logger = logging.getLogger('DeepCream.main')
 
 finished = False
-runtime = 180  # time the program is allowed to run (in seconds)
+runtime = 180  # maximum time the program is allowed to run (in seconds)
 
 while int(time.time() - start_time) < runtime and not finished:
     # Makes sure the DeepCream module keeps running for the whole time
     try:
         deepcream = DeepCream.initialize(
             os.path.join(ABS_PATH, 'data', 'input'),
-            tpu_support=False)
+            tpu_support=True, pi_camera=False)
         logger.info('Initialised DeepCream')
         allowed_execution_time = runtime - (
             int(time.time() - start_time)) - 120
