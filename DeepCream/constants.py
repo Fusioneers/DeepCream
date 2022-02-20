@@ -19,7 +19,7 @@ FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(threadName)s: %(funcName)s: ' \
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '
 
-CONSOLE_LOGGING_LEVEL = logging.DEBUG
+CONSOLE_LOGGING_LEVEL = logging.WARNING
 
 log_time = get_time()
 LOG_DIR = os.path.normpath(os.path.join(ABS_PATH, 'logs'))
