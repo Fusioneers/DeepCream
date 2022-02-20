@@ -5,8 +5,8 @@ import threading as th
 import time as t
 from queue import Queue
 
-import numpy as np
 import cv2 as cv
+import numpy as np
 
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
@@ -26,7 +26,8 @@ max_border_proportion = 1
 
 
 class DeepCream:
-    def __init__(self, directory: str, tpu_support: bool = False, pi_camera: bool = False, capture_resolution=(2560, 1920)):
+    def __init__(self, directory: str, tpu_support: bool = False,
+                 pi_camera: bool = False, capture_resolution=(2560, 1920)):
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
@@ -39,6 +40,9 @@ class DeepCream:
                 self.camera = PiCamera()
                 self.camera.resolution = capture_resolution
                 self.camera.framerate = 15
+            except KeyboardInterrupt as e:
+                logger.error(e)
+                raise KeyboardInterrupt from e
             except Exception as e:
                 logger.error('Camera not configured: ', str(e))
                 raise ValueError('Camera not configured')
@@ -55,8 +59,6 @@ class DeepCream:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', 'database'))
 
-
-        # TODO __review_photo is missing from the threads?
         self.orig_review_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.orig_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.mask_queue = Queue(maxsize=QUEUE_MAX_SIZE)
