@@ -11,6 +11,7 @@ import os
 import joblib
 import numpy as np
 import pandas as pd
+from typing import List
 
 from DeepCream.classification.cloud_types import CLOUD_TYPES
 from DeepCream.constants import ABS_PATH, analysis_features
@@ -21,9 +22,9 @@ logger = logging.getLogger('DeepCream.classification')
 class Classification:
     """A class to determine the type of a cloud
 
-    First the class has to be initialised. This has to be happening only once.
+    First the class has to be initialised. This must only happen once.
     Then the method Classification.evaluate takes a dataframe of cloud
-    parameters as input (the one returned by analysis.evaluate) and returns
+    parameters as input (the one returned by Analysis.evaluate) and returns
     another dataframe with the columns being the different types of clouds, the
     rows the clouds and the cells the probabilities for each one.
 
@@ -43,7 +44,7 @@ class Classification:
                          'standard_scaler.bin'))
 
     def evaluate(self, analysis: pd.DataFrame):
-        """ Gets the probabilites to be of a specific cloud type for each cloud
+        """ Gets the probabilities to be of a specific cloud type for each cloud
 
         This method calls the method __iter_over_types for each cloud and
         combines the results to a single dataframe.
@@ -52,7 +53,7 @@ class Classification:
             analysis:
             A pandas DataFrame with the columns being the different parameters
             and the rows clouds. This has to have a specific set of parameters
-            returned by the evaluate mehod of the class Analysis.
+            returned by the evaluate method of the class Analysis.
 
         Returns:
         Dataframe with the columns being the different types of clouds, the
@@ -72,7 +73,7 @@ class Classification:
 
         return classification
 
-    def __iter_over_types(self, cloud: np.ndarray) -> list[float]:
+    def __iter_over_types(self, cloud: np.ndarray) -> List[float]:
         """Method for calling the method __check_type for each cloud type and
         aggregating the results
 

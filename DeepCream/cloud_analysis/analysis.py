@@ -24,6 +24,7 @@ import logging
 import cv2 as cv
 import numpy as np
 import pandas as pd
+from typing import List
 
 from DeepCream.constants import (DEFAULT_STEP_LEN,
                                  DEFAULT_APPR_DIST,
@@ -135,7 +136,7 @@ class Analysis:
                                             val_threshold)
             logger.info(f'Created {len(self.clouds)} clouds')
 
-    def __get_contours(self) -> list[np.ndarray]:
+    def __get_contours(self) -> List[np.ndarray]:
         """Gets the contours of the clouds.
 
         Returns:
@@ -203,17 +204,17 @@ class Analysis:
         logger.debug('Filtered clouds by minimum color')
 
         all_clouds = sorted(all_clouds,
-                            key=lambda cloud:
-                            getattr(cloud, 'contour_area'), reverse=True)
+                            key=lambda iter_cloud:
+                            getattr(iter_cloud, 'contour_area'), reverse=True)
 
-        def check_valid(cloud):
-            edges = cloud.edges(border_width, border_width, convex_hull=True)
+        def check_valid(input_cloud):
+            edges = input_cloud.edges(border_width, border_width, convex_hull=True)
             if not edges.size:
                 out = False
             else:
                 min_vals = np.min(np.max(edges, axis=2), axis=1)
                 border_proportion = np.count_nonzero(
-                    min_vals >= val_threshold) / len(cloud.hull)
+                    min_vals >= val_threshold) / len(input_cloud.hull)
                 out = border_proportion <= max_border_proportion
             return out
 
