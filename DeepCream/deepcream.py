@@ -5,7 +5,6 @@ import threading as th
 import time as t
 from queue import Queue
 
-import numpy as np
 import cv2
 
 from DeepCream.classification.classification import Classification
@@ -42,6 +41,7 @@ class DeepCream:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', 'database'))
 
+        self.orig_review_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.orig_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.mask_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.analysis_queue = Queue(maxsize=QUEUE_MAX_SIZE)
@@ -106,19 +106,6 @@ class DeepCream:
         self.alive = False
         logger.info('Finished running')
 
-    def __review_photo(self, image: np.ndarray) -> bool:
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-        # TODO find ideal values
-        if cv2.mean(gray)[0] < 20 or cv2.mean(gray)[0] > 150:
-            return False
-
-        # TODO take the average of the four corners (bigger than 1px)
-        if gray[0][0] > 20:
-            return False
-
-        return True
-
     def __get_orig(self):
         logger.info('Started thread get_orig')
         while self.alive:
@@ -131,6 +118,24 @@ class DeepCream:
 
             self.orig_queue.put(orig)
             logger.debug('Got orig')
+
+    def __review_orig(self):
+        while self.alive:
+            if not self.orig_review_queue.empty():
+                orig = self.orig_review_queue.get()
+                gray = cv2.cvtColor(orig, cv2.COLOR_RGB2GRAY)
+
+                # TODO find ideal values
+                if cv2.mean(gray)[0] < 20 or cv2.mean(gray)[0] > 150:
+                    out = False
+                # TODO take the average of the four corners (bigger than 1px)
+                elif gray[0][0] > 20:
+                    out = False
+                else:
+                    out = True
+
+                if out:
+                    self.orig_queue.put(orig)
 
     def __save_orig(self):
         logger.info('Started thread save_orig')
