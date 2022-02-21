@@ -66,7 +66,8 @@ class CloudDetection:
         """
 
         scaled = Image.fromarray(image)
-        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT), Image.ANTIALIAS)
+        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT),
+                              Image.ANTIALIAS)
         # scaled.thumbnail((self.WIDTH, self.HEIGHT))
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
@@ -97,7 +98,8 @@ class CloudDetection:
             self.interpreter.set_tensor(
                 self.input_details[0]['index'], np.asarray([image]))
             self.interpreter.invoke()
-            return self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+            return \
+            self.interpreter.get_tensor(self.output_details[0]['index'])[0]
         else:
             raise ValueError('No AI was configured')
 
@@ -125,7 +127,7 @@ class CloudDetection:
         # Compute the mask
         mask = self.__ai_generate_image_mask(scaled)
 
-        print(mask.shape)
+        # print(mask.shape)
 
         # Make the result binary
         _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,

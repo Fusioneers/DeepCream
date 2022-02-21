@@ -1,10 +1,11 @@
 import logging
 import os.path
+
 import cv2
 import numpy as np
-from PIL import Image, ImageOps
+import pandas as pd
 import tensorflow as tf
-from matplotlib import pyplot as plt
+from PIL import Image, ImageOps
 from numpy import asarray
 
 from DeepCream.constants import ABS_PATH
@@ -78,18 +79,28 @@ class Pareidolia:
 
         # Check if the image actually loaded
         if normal is None:
-            logger.error('Image was not loaded properly')
             raise ValueError('Image was not loaded properly')
         elif normal.shape != (self.HEIGHT, self.WIDTH, 3):
-            logger.error('Image has wrong dimensions')
             raise ValueError('Image has wrong dimensions')
 
         # Compute the prediction
         pred = self.__ai_generate_pareidolia_idea(normal)
+        # label = pb.labels[str(np.argmax(pred))]
 
-        label = pb.labels[str(np.argmax(pred))]
+        return pred
 
-        return label
+    def evaluate_clouds(self, clouds: list[np.ndarray]) -> pd.DataFrame:
+        if not clouds:
+            raise ValueError('There are clouds given')
+
+        probabilities = []
+        for cloud in clouds:
+            probabilities.append(self.evaluate_image(cloud))
+
+        pareidolia = pd.DataFrame(columns=[self.labels[str(i)]
+                                           for i in range(len(self.labels))],
+                                  data=probabilities)
+        return pareidolia
 
 
 if __name__ == '__main__':

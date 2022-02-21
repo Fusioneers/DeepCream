@@ -146,10 +146,8 @@ class Analysis:
 
         contours, _ = cv.findContours(self.mask,
                                       cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
-        logger.debug('Found contours with cv.findContours')
-
         contours = [np.squeeze(contour) for contour in contours]
-        logger.debug('Reformatted contours')
+        logger.debug('Found contours')
 
         return contours
 
@@ -208,7 +206,8 @@ class Analysis:
                             getattr(iter_cloud, 'contour_area'), reverse=True)
 
         def check_valid(input_cloud):
-            edges = input_cloud.edges(border_width, border_width, convex_hull=True)
+            edges = input_cloud.edges(border_width, border_width,
+                                      convex_hull=True)
             if not edges.size:
                 out = False
             else:

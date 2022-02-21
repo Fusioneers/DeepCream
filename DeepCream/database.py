@@ -309,7 +309,7 @@ class DataBase:
 
         logger.info('Saved classification')
 
-    def save_pareidolia(self, pareidolia: dict, identifier: str):
+    def save_pareidolia(self, pareidolia: pd.DataFrame, identifier: str):
         logger.debug(f'Attempting to save pareidolia to {identifier}')
         if not len(pareidolia):
             logger.warning(
@@ -320,8 +320,8 @@ class DataBase:
         self.metadata['data'][identifier][
             'created pareidolia'] = get_time()
 
-        with open(self.__get_path(identifier, 'pareidolia.json'), 'w') as f:
-            f.write(json.dumps(pareidolia, indent=4))
+        pareidolia.to_csv(self.__get_path(identifier, 'pareidolia.csv'),
+                          index=False)
 
         self.metadata['data'][identifier]['quality'] = self.__get_quality(
             identifier)
@@ -451,9 +451,7 @@ class DataBase:
             raise ValueError(
                 f'Identifier {identifier} does not contain an pareidolia')
 
-        with open(self.__get_path(identifier, 'pareidolia.json'),
-                  'r') as pareidolia:
-            pareidolia = json.load(pareidolia)
+        pareidolia = pd.read_csv(self.__get_path(identifier, 'pareidolia.csv'))
 
         logger.info(f'Loaded pareidolia from {identifier}')
         return pareidolia
