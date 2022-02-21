@@ -12,6 +12,7 @@ import cv2
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
+from DeepCream.pareidolia.pareidolia import Pareidolia
 from DeepCream.constants import (DEBUG_MODE,
                                  ABS_PATH,
                                  QUEUE_MAX_SIZE,
@@ -53,6 +54,8 @@ class DeepCream:
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
         self.classification = Classification()
+        self.pareidolia = Pareidolia(tpu_support=False)
+
         if DEBUG_MODE:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
@@ -153,7 +156,9 @@ class DeepCream:
             #       - self.__delay_save_mask - self.__delay_save_mask)
 
             # TODO instead of controlling speed wait til a threshold is reached
-
+            #   this could raise the problem that during a dark period the
+            #   entire program is stopping
+            
             # first branch
             self.__delay_get_orig, self.__delay_review_orig = get_delay(
                 'get_orig', 'review_orig')
