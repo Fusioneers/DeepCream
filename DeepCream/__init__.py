@@ -1,6 +1,5 @@
 import os
 import logging
-
 from DeepCream.deepcream import DeepCream as DeepCreamClass
 from DeepCream.constants import (LOG_DIR,
                                  DEBUG_LOG_PATH,
@@ -14,8 +13,7 @@ from DeepCream.constants import (LOG_DIR,
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-# Start logging as soon as DeepCream is initialized
-
+# Start logging as soon as the DeepCream module is initialized
 logger = logging.getLogger('DeepCream')
 logger.setLevel(logging.DEBUG)
 
@@ -38,6 +36,7 @@ logger.addHandler(console_handler)
 logger.info('Initialised logger')
 
 
+# This function just makes it more convenient to initialize the DeepCream module
 def initialize(directory, tpu_support: bool = False,
                pi_camera: bool = False, capture_resolution=(2592, 1952)):
     return DeepCreamClass(directory, tpu_support, pi_camera, capture_resolution)
