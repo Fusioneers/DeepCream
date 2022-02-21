@@ -99,6 +99,9 @@ class Analysis:
             are fewer clouds than the specified value in the image all
             valid clouds are returned.
 
+            For a more detailed description of the following parameters see the
+            method __get_clouds.
+
             max_border_proportion:
             The maximum proportion of the convex hull a cloud is allowed to
             share with the edge of the visible area.
@@ -115,17 +118,23 @@ class Analysis:
         self.orig = orig
         self.height, self.width, _ = self.orig.shape
 
+        # The mask given to the __init__ method is of a smaller shape because
+        # of a lower computation time. It has to be resized to the dimensions
+        # of orig.
         self.mask = cv.resize(mask, (self.width, self.height))
+        # This is to ensure that the mask is a 2 dimensional mask and not a
+        # rgb image although every channel has the same values.
         if len(self.mask.shape) == 3:
             self.mask = self.mask[:, :, 0]
         logger.debug('Resized mask')
 
         if not np.any(self.mask):
+            # Although an empty mask should be caught way earlier in the
+            # program, this gives a warning in case of no clouds on the image
             self.contours = ()
             self.clouds = []
             logger.warning('Orig has no clouds')
         else:
-
             self.contours = self.__get_contours()
             logger.debug('Created contours')
 
@@ -190,6 +199,7 @@ class Analysis:
             valid.
         """
 
+        # At first all contours are transformed to clouds.
         all_clouds = []
         for contour in contours:
             mask = np.zeros((self.height, self.width), np.uint8)
@@ -198,6 +208,8 @@ class Analysis:
             all_clouds.append(self.Cloud(self.orig, img, mask, contour))
         logger.debug('Created list of all clouds')
 
+        # This ensures that no black clouds i.e. wrongly determined clouds are
+        # further analysed.
         all_clouds = list(filter(lambda x: np.all(x.mean() > 5), all_clouds))
         logger.debug('Filtered clouds by minimum color')
 
@@ -206,6 +218,8 @@ class Analysis:
                             getattr(iter_cloud, 'contour_area'), reverse=True)
 
         def check_valid(input_cloud: Analysis.Cloud):
+            """This function checks the border of a cloud whether it is near
+            the edge of the visible area"""
             edges = input_cloud.edges(DEFAULT_BORDER_WIDTH,
                                       DEFAULT_BORDER_WIDTH,
                                       convex_hull=True)
@@ -218,6 +232,8 @@ class Analysis:
                 out = border_proportion <= max_border_proportion
             return out
 
+        # If the max_border_proportion equals 1, then the check_valid procedure
+        # is turned off.
         if max_border_proportion == 1:
             if len(all_clouds) <= max_num_clouds:
                 clouds = all_clouds
@@ -227,6 +243,7 @@ class Analysis:
                 clouds = all_clouds[:max_num_clouds]
                 logger.debug('Filtered clouds by size')
         else:
+            # The clouds are checked in the order of large to small.
             clouds = []
             for cloud in all_clouds:
                 if len(clouds) >= max_num_clouds:
@@ -252,6 +269,8 @@ class Analysis:
                 diff_edges = cloud.diff_edges(50,
                                               200)
             except ValueError as err:
+                # This ValueError is raised when the cloud has no valid spans
+                # i.e. it is located at the very edge of the image
                 logger.debug(err)
                 continue
 
@@ -310,6 +329,10 @@ class Analysis:
             A numpy array containing the coordinates of the edge of the
             cloud.
 
+            center:
+            The center of the cloud. This is for distinguishing the clouds
+            later in the analysis.csv.
+
             contour_perimeter:
             The perimeter of the contour.
 
@@ -355,7 +378,7 @@ class Analysis:
             """
 
             self.orig = orig
-            self.height, self.width, self.channels = self.orig.shape
+            self.height, self.width, _ = self.orig.shape
             self.img = img
             self.mask = mask
             self.contour = contour
@@ -407,15 +430,15 @@ class Analysis:
         def transparency(self) -> float:
             """Gets the transparency of the cloud.
 
-            The transparency is computed by averaging the deviation of each
-            pixel in the cloud from pure white. This is less effective for
-            light ground such as snow or if the cloud itself is colorful e.g.
-            at sunset. Note that it is based on the saturation of an HSV image
-            of the cloud.
+            Transparency is calculated by taking the average of the deviation
+            of each pixel in the cloud from pure white. This is less effective
+            for bright backgrounds such as snow or when the cloud itself is
+            colored, e.g. at sunset. Note that it is based on the saturation
+            of an HSV image of the cloud.
 
             Returns:
                 A value between 0 and 255. 0 means that the cloud is perfect
-                grey, while 255 means a very colorful cloud.
+                grey, while 255 indicates a very colorful cloud.
             """
 
             sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
@@ -485,8 +508,12 @@ class Analysis:
 
             contour = self.hull if convex_hull else self.contour
 
+            # These are the difference vectors between each pixel on the
+            # contour and its neighbor (on the contour).
             appr_vec = np.roll(contour, appr_dist, axis=0)
             appr_vec -= contour
+
+            # This normalises all difference vectors to a length of 1.
             appr_vec_norm = np.linalg.norm(appr_vec, axis=1)
             appr_vec = appr_vec * step_len / np.tile(appr_vec_norm, (2, 1)).T
 
@@ -498,6 +525,7 @@ class Analysis:
                      for n, vec in enumerate(perp_vec)]
             spans = np.floor(np.array(spans)).astype('int')
 
+            # A span is invalid if it would reach outside the image
             valid_spans = [span for span in spans if
                            np.all(span[:, 0] > 0)
                            and np.all(span[:, 0] < self.height)
@@ -506,8 +534,12 @@ class Analysis:
             valid_spans = np.array(valid_spans)
 
             if not valid_spans.size:
+                # This ValueError is raised when the cloud has no valid spans
+                # i.e. it is located at the very edge of the image
                 raise ValueError('The cloud has no valid spans')
 
+            # This takes the coordinates determined by the spans and returns
+            # the values of orig at those points.
             edges = self.orig[valid_spans[:, :, 0], valid_spans[:, :, 1]]
             return edges
 
