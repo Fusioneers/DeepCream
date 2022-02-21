@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image, ImageOps
 import tensorflow as tf
 from numpy import asarray
-
 from DeepCream.constants import ABS_PATH
 
 logger = logging.getLogger('DeepCream.cloud_detection')
@@ -17,25 +16,29 @@ class CloudDetection:
 
         """
 
-        Args:
+        This class is responsible for filtering out the clouds of any given image.
 
-        Optional Args:
+        Args:
             binary_cloud_threshold:
             The threshold (between 0 and 1) which determines if the pixel is
-            part of a cloud.
+            part of a cloud. This value is used in evaluate_image after and
+            applied to the AI generated mask. (0.85 by default)
 
             tpu_support:
-            Whether the systems support a tpu (False by default).
+            Whether the system supports a tpu. If true the cloud detection
+            will use the edgetpu library from pycoral.utils, otherwise it will use
+            keras to load the model. (False by default)
         """
 
         # Set thresholds for cloud detection
         self.binaryCloudThreshold = binary_cloud_threshold
 
-        # Load the machine learning model
+        # Specify the image parameters
         self.HEIGHT = 192
         self.WIDTH = 256
         self.CHANNELS = 3
 
+        # Load the machine learning model
         if not tpu_support:
             self.interpreter = None
             self.model = tf.keras.models.load_model(os.path.join(ABS_PATH,
@@ -55,22 +58,28 @@ class CloudDetection:
 
         """
 
-        Returns:
-            normal:
-            The image resized to (self.WIDTH, self.HEIGHT).
+        This function is responsible for preparing the image to
+        be used as input for the AI.
 
+        Args:
+            image:
+            The image in RGB format as numpy array.
+
+        Returns:
             scaled:
-            The image resized to (self.WIDTH, self.HEIGHT) and scaled to have
-            pixel values between 0 and 1.
+            The image in RGB format as numpy array resized to self.WIDTH and self.HEIGHT
+            and scaled to have pixel values between 0 and 1.
 
         """
 
+        # Converts the image to a PIL image
         scaled = Image.fromarray(image)
-        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT),
-                              Image.ANTIALIAS)
-        # scaled.thumbnail((self.WIDTH, self.HEIGHT))
+        # Resizes the image
+        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT), Image.ANTIALIAS)
+        # Converts it back to an array
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
+        # Scales the pixel values to lie between 0 and 1
         scaled /= 255.0
 
         return scaled
@@ -79,15 +88,17 @@ class CloudDetection:
 
         """
 
+        This function generates an image mask based on the input image.
+
         Args:
             image:
-            The cloud image in the dimensions
-            (self.WIDTH, self.HEIGHT, self.CHANNELS).
+            The image in RGB format as numpy array with the dimensions
+            self.WIDTH, self.HEIGHT.
 
         Returns:
-            The cloud mask (calculated by the AI) in the dimensions
-            (self.WIDTH, self.HEIGHT, 1), with 0 representing a 0% probability
-            for a cloud and 255 representing a 100% chance.
+            The cloud mask (calculated by the AI) as black and white image in the dimensions
+            self.WIDTH, self.HEIGHT, with 1 representing a 100% chance for a pixels to be part
+            of a cloud and 0 representing a 0% chance.
 
         """
 
@@ -98,8 +109,7 @@ class CloudDetection:
             self.interpreter.set_tensor(
                 self.input_details[0]['index'], np.asarray([image]))
             self.interpreter.invoke()
-            return \
-            self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+            return self.interpreter.get_tensor(self.output_details[0]['index'])[0]
         else:
             raise ValueError('No AI was configured')
 
@@ -107,16 +117,23 @@ class CloudDetection:
 
         """
 
+        This is the only public function of the class and its job is to
+        call the functions above to then return the mask.
+
+        Args:
+            image:
+            The image in RGB format as numpy array with any dimensions.
+
         Returns:
-            A black and white mask with black representing no clouds and white
-            representing clouds.
+            A black and white mask as numpy array with white representing
+            cloud pixels and black representing all others.
 
         """
 
         # Load the image
         scaled = self.__load_image(image)
 
-        # Check if the image actually loaded
+        # Check if the image was loaded and formatted correctly
         if scaled is None:
             logger.error('Image was not loaded properly')
             raise ValueError('Image was not loaded properly')
@@ -130,19 +147,8 @@ class CloudDetection:
         # print(mask.shape)
 
         # Make the result binary
+        # Make the result binary (using the threshold from the beginning)
         _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,
                                 cv2.THRESH_BINARY)
-
-        # plt.figure(figsize=(12, 8))
-        # plt.subplot(121)
-        # plt.title('orig')
-        # plt.imshow(scaled)
-        # plt.subplot(122)
-        # plt.title('mask')
-        # plt.imshow(mask)
-        # plt.show()
-
-        # Apply the mask to filter out everything but the clouds
-        # multi_color_output = cv2.bitwise_and(normal, normal, mask=mask)
 
         return mask

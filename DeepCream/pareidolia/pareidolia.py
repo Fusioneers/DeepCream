@@ -1,11 +1,9 @@
 import logging
 import os.path
-
 import cv2
 import numpy as np
-import pandas as pd
-import tensorflow as tf
 from PIL import Image, ImageOps
+import tensorflow as tf
 from numpy import asarray
 
 from DeepCream.constants import ABS_PATH
@@ -32,14 +30,12 @@ class Pareidolia:
 
             self.model = None
             self.interpreter = edgetpu.make_interpreter(
-                os.path.join(ABS_PATH,
-                             'DeepCream/pareidolia/models/tflite/model.tflite'))
+                os.path.join(ABS_PATH, 'DeepCream/pareidolia/models/tflite/model.tflite'))
             self.interpreter.allocate_tensors()
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
 
-            self.labels = self.__load_labels(os.path.join(ABS_PATH,
-                                                          'DeepCream/pareidolia/models/tflite/labels.txt'))
+            self.labels = self.__load_labels(os.path.join(ABS_PATH, 'DeepCream/pareidolia/models/tflite/labels.txt'))
 
     def __load_labels(self, labels_file):
         labels = {}
@@ -53,8 +49,7 @@ class Pareidolia:
 
     def __load_image(self, image: np.ndarray) -> np.ndarray:
         normal = Image.fromarray(image)
-        normal = ImageOps.fit(normal, (self.WIDTH, self.HEIGHT),
-                              Image.ANTIALIAS)
+        normal = ImageOps.fit(normal, (self.WIDTH, self.HEIGHT), Image.ANTIALIAS)
         # normal.thumbnail((self.WIDTH, self.HEIGHT))
         normal = asarray(normal)
         normal = normal.astype('float32')

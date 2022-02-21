@@ -11,13 +11,13 @@ import numpy as np
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
+from DeepCream.pareidolia.pareidolia import Pareidolia
 from DeepCream.constants import (DEBUG_MODE,
                                  ABS_PATH,
                                  QUEUE_MAX_SIZE,
                                  get_time,
                                  )
 from DeepCream.database import DataBase
-from DeepCream.pareidolia.pareidolia import Pareidolia
 
 logger = logging.getLogger('DeepCream.deepcream')
 
@@ -57,7 +57,7 @@ def thread(name: str):
 
 class DeepCream:
     def __init__(self, directory: str, tpu_support: bool = False,
-                 pi_camera: bool = False, capture_resolution=(2560, 1920)):
+                 pi_camera: bool = False, capture_resolution=(2592, 1952)):
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
@@ -241,7 +241,7 @@ class DeepCream:
     def __get_orig(self):
         if self.camera:
             orig = np.empty(
-                (self.capture_resolution[1], self.capture_resolution[0], 3))
+                (self.capture_resolution[1], self.capture_resolution[0], 3), dtype=np.uint8)
             self.camera.capture(orig, 'rgb')
         else:
             # Returns a random (RGB) image (placeholder until real camera)
