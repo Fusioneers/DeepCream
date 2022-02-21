@@ -3,8 +3,8 @@ import os
 import random
 import threading as th
 import time as t
-from queue import Queue
 import traceback
+from queue import Queue
 
 import cv2 as cv
 import numpy as np
@@ -16,6 +16,8 @@ from DeepCream.constants import (DEBUG_MODE,
                                  ABS_PATH,
                                  QUEUE_MAX_SIZE,
                                  get_time,
+                                 DEFAULT_DELAY,
+                                 MAX_TIME,
                                  )
 from DeepCream.database import DataBase
 from DeepCream.pareidolia.pareidolia import Pareidolia
@@ -37,16 +39,42 @@ max_border_proportion = 1
 # TODO add kill switch if some function takes too long
 
 def thread(name: str):
+    def timer(self, max_time: float, finished: bool):
+        dtime = t.time()
+        while self.alive and t.time() - dtime < max_time:
+            t.sleep(DEFAULT_DELAY)
+            if finished:
+                return
+        else:
+            if not self.alive:
+                return
+            logger.error(
+                f'The function {name} has taken an excessive amount of '
+                f'time, attempting to restart DeepCream')
+            with self.lock:
+                self.alive = False
+
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             logger.info(f'Started thread {name}')
             while self.alive:
                 try:
                     t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
+                    finished = False
+                    th_timer = th.Thread(target=timer,
+                                         args=(self, MAX_TIME, finished),
+                                         daemon=True)
+                    th_timer.start()
                     dtime = t.time()
                     func(self, *args, **kwargs)
+                    finished = True
                     setattr(self, f'_DeepCream__duration_{name}',
                             (t.time() - dtime))
+
+                except (MemoryError, KeyboardInterrupt) as e:
+                    with self.lock:
+                        logger.critical(traceback.format_exc())
+                        raise e from e
                 except BaseException as e:
                     with self.lock:
                         logger.error(traceback.format_exc())
@@ -101,6 +129,9 @@ class DeepCream:
         self.pareidolia_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         logger.debug('Initialised queues')
 
+        self.__th_delay_supervisor = th.Thread(target=self.__delay_supervisor,
+                                               daemon=True)
+
         self.__th_get_orig = th.Thread(target=self.__get_orig, daemon=True)
         self.__th_review_orig = th.Thread(target=self.__review_orig,
                                           daemon=True)
@@ -119,6 +150,8 @@ class DeepCream:
             target=self.__save_classification, daemon=True)
         self.__th_save_pareidolia = th.Thread(target=self.__save_pareidolia,
                                               daemon=True)
+
+        self.__th_delay_supervisor.name = 'delay_supervisor'
 
         self.__th_get_orig.name = 'get_orig'
         self.__th_review_orig.name = 'review_orig'
@@ -160,10 +193,12 @@ class DeepCream:
 
         logger.info('Initialisation of DeepCream finished')
 
-    def run(self, allowed_execution_time: int):
+    def run(self):
         logger.debug('Attempting to start running')
 
         start_time = t.time()
+
+        self.__th_delay_supervisor.start()
 
         self.__th_get_orig.start()
         self.__th_review_orig.start()
@@ -178,6 +213,8 @@ class DeepCream:
         self.__th_save_pareidolia.start()
         logger.debug('Started threads')
 
+    def __delay_supervisor(self):
+
         def get_delay(start, end):
             start_delay = getattr(self, f'_DeepCream__delay_{start}')
             start_duration = getattr(self, f'_DeepCream__duration_{start}')
@@ -189,50 +226,53 @@ class DeepCream:
                 new_start_delay = end_duration - start_duration
                 return new_start_delay, 0
 
-        while int(t.time() - start_time) < allowed_execution_time:
-            t.sleep(0.5)
-            # print(self.__delay_get_mask + self.__duration_get_mask
-            #       - self.__delay_save_mask - self.__delay_save_mask)
+        while self.alive:
+            try:
+                t.sleep(DEFAULT_DELAY)
 
-            # orig based threads
-            self.__delay_get_orig, self.__delay_review_orig = get_delay(
-                'get_orig', 'review_orig')
-            self.__delay_review_orig, self.__delay_save_orig = get_delay(
-                'review_orig', 'save_orig')
-            delay_save_orig_a, self.__delay_get_mask = get_delay(
-                'save_orig', 'get_mask')
-            delay_save_orig_b, delay_get_analysis_pareidolia_a = get_delay(
-                'save_orig', 'get_analysis_pareidolia')
-            self.__delay_save_orig = max(delay_save_orig_a, delay_save_orig_b)
+                # orig based threads
+                self.__delay_get_orig, self.__delay_review_orig = get_delay(
+                    'get_orig', 'review_orig')
+                self.__delay_review_orig, self.__delay_save_orig = get_delay(
+                    'review_orig', 'save_orig')
+                delay_save_orig_a, self.__delay_get_mask = get_delay(
+                    'save_orig', 'get_mask')
+                delay_save_orig_b, delay_get_analysis_pareidolia_a = get_delay(
+                    'save_orig', 'get_analysis_pareidolia')
+                self.__delay_save_orig = max(delay_save_orig_a,
+                                             delay_save_orig_b)
 
-            # mask based threads
-            self.__delay_get_mask, self.__delay_save_mask = get_delay(
-                'get_mask', 'save_mask')
-            self.__delay_save_mask, \
-            delay_get_analysis_pareidolia_b = get_delay(
-                'save_mask', 'get_analysis_pareidolia')
-            self.__delay_save_mask *= 0.75
+                # mask based threads
+                self.__delay_get_mask, self.__delay_save_mask = get_delay(
+                    'get_mask', 'save_mask')
+                self.__delay_save_mask, \
+                delay_get_analysis_pareidolia_b = get_delay(
+                    'save_mask', 'get_analysis_pareidolia')
+                self.__delay_save_mask *= 0.75
 
-            # analysis based threads
-            self.__delay_get_analysis_pareidolia, \
-            self.__delay_save_analysis = get_delay(
-                'get_analysis_pareidolia', 'save_analysis')
-            self.__delay_get_analysis_pareidolia = min(
-                delay_get_analysis_pareidolia_a,
-                delay_get_analysis_pareidolia_b)
-            self.__delay_save_analysis, \
-            self.__delay_get_classification = get_delay('save_analysis',
-                                                        'get_classification')
-            self.__delay_get_classification, \
-            self.__delay_save_classification = get_delay('get_classification',
-                                                         'save_classification')
+                # analysis based threads
+                self.__delay_get_analysis_pareidolia, \
+                self.__delay_save_analysis = get_delay(
+                    'get_analysis_pareidolia', 'save_analysis')
+                self.__delay_get_analysis_pareidolia = min(
+                    delay_get_analysis_pareidolia_a,
+                    delay_get_analysis_pareidolia_b)
+                self.__delay_save_analysis, self.__delay_get_classification \
+                    = get_delay('save_analysis', 'get_classification')
+                self.__delay_get_classification, \
+                self.__delay_save_classification = get_delay(
+                    'get_classification', 'save_classification')
 
-            # pareidolia based threads
-            self.__delay_get_analysis_pareidolia, \
-            self.__delay_save_pareidolia = get_delay('get_analysis_pareidolia',
-                                                     'save_pareidolia')
-        self.alive = False
-        logger.info('Finished running')
+                # pareidolia based threads
+                self.__delay_get_analysis_pareidolia, \
+                self.__delay_save_pareidolia = get_delay(
+                    'get_analysis_pareidolia', 'save_pareidolia')
+
+            except (MemoryError, KeyboardInterrupt) as e:
+                logger.critical(traceback.format_exc())
+            except BaseException as e:
+                with self.lock:
+                    logger.error(traceback.format_exc())
 
     @thread('get_orig')
     def __get_orig(self):
@@ -305,6 +345,7 @@ class DeepCream:
         with self.lock:
             identifier = self.database.load_id('created mask',
                                                'created analysis')
+
         if identifier is not None:
             with self.lock:
                 orig = self.database.load_orig(identifier)

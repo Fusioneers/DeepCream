@@ -57,3 +57,5 @@ analysis_features = ['center x',
                      'sharp edges']
 
 QUEUE_MAX_SIZE = 5
+DEFAULT_DELAY = 0.5
+MAX_TIME = 0.1

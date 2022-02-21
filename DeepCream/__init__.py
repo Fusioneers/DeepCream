@@ -1,6 +1,6 @@
-import os
 import logging
-from DeepCream.deepcream import DeepCream as DeepCreamClass
+import os
+
 from DeepCream.constants import (LOG_DIR,
                                  DEBUG_LOG_PATH,
                                  INFO_LOG_PATH,
@@ -8,6 +8,7 @@ from DeepCream.constants import (LOG_DIR,
                                  FILE_LOGGING_FORMAT,
                                  CONSOLE_LOGGING_FORMAT,
                                  )
+from DeepCream.deepcream import DeepCream as DeepCreamClass
 
 # Makes sure there is a log folder
 if not os.path.exists(LOG_DIR):
