@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import traceback
-from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
@@ -96,8 +95,14 @@ class DataBase:
         logger.debug(f'Database size: {size}')
         return size
 
-    def __get_quality(self, identifier: str) -> int:
-        return np.random.random()
+    def __get_quality(self, identifier: str) -> float:
+        max_classification = np.max(
+            np.max(self.load_classification(identifier))) * 9
+
+        max_pareidolia = np.max(
+            np.max(self.load_pareidolia(identifier))) * 54
+
+        return np.sqrt(max_classification ** 2 + max_pareidolia ** 2)
 
     def __compress_orig(self, identifier: str):
         logger.debug(f'Attempting to compress image {identifier}')
@@ -122,38 +127,25 @@ class DataBase:
 
     def __delete_orig(self, identifier: str):
         logger.debug(f'Attempting to delete orig {identifier}')
-        if self.__get_param(identifier, 'quality'):
-            if self.__get_param(identifier, 'compressed'):
-                try:
-                    os.remove(self.__get_path(identifier, 'orig.jpg'))
-                    self.metadata['data'][identifier]['deleted'] = get_time()
-                    self.metadata['metadata']['num deleted images'] += 1
-                    self.metadata['metadata']['num compressed images'] -= 1
-                    self.__update_metadata()
-                    logger.debug(f'Deleted orig {identifier}')
-                except FileNotFoundError:
-                    logger.error(traceback.format_exc())
-                    if os.path.exists(self.__get_path(identifier, 'orig.png')):
-                        logger.error(
-                            f'Tried to delete image {identifier} which is not '
-                            f'compressed')
-                        logger.info(
-                            f'Attempting to compress image {identifier}')
-                        self.__compress_orig(identifier)
-                    else:
-                        logger.error(
-                            f'Tried to delete image {identifier} which '
-                            f'was already deleted')
+        try:
+            os.remove(self.__get_path(identifier, 'orig.jpg'))
+            self.metadata['data'][identifier]['deleted'] = get_time()
+            self.metadata['metadata']['num deleted images'] += 1
+            self.metadata['metadata']['num compressed images'] -= 1
+            self.__update_metadata()
+            logger.debug(f'Deleted orig {identifier}')
+        except FileNotFoundError:
+            logger.error(traceback.format_exc())
+            if os.path.exists(self.__get_path(identifier, 'orig.png')):
+                os.remove(self.__get_path(identifier, 'orig.png'))
+                self.metadata['data'][identifier]['deleted'] = get_time()
+                self.metadata['metadata']['num deleted images'] += 1
+                self.__update_metadata()
+                logger.debug(f'Deleted orig {identifier}')
             else:
-                logger.warning(f'Tried to delete image {identifier} which is '
-                               f'not compressed, attempting to compress image '
-                               f'{identifier}')
-                self.__compress_orig(identifier)
-        else:
-            logger.error(f'Tried to delete image {identifier} '
-                         f'which has no quality')
-            raise ValueError(f'Tried to delete image {identifier} '
-                             f'which has no quality')
+                logger.error(
+                    f'Tried to delete image {identifier} which '
+                    f'was already deleted')
 
     def __free_space(self):
         logger.debug('Attempting to free up space')
@@ -192,7 +184,7 @@ class DataBase:
             worst_img_idx = np.argmin(np.array(qualities))
             worst_img = not_deleted[worst_img_idx]
 
-            self.__delete_orig(worst_img)
+            self.delete_orig(worst_img)
 
         self.__update_metadata()
 
@@ -280,10 +272,6 @@ class DataBase:
         analysis.to_csv(self.__get_path(identifier, 'analysis.csv'),
                         index=False)
 
-        if DEBUG_MODE:
-            self.metadata['data'][identifier]['quality'] = self.__get_quality(
-                identifier)
-
         self.__update_metadata()
 
         logger.info(f'Saved analysis to {identifier}')
@@ -307,6 +295,11 @@ class DataBase:
 
         self.__update_metadata()
 
+        if self.metadata['data'][identifier]['created pareidolia']:
+            self.metadata['data'][identifier]['quality'] = self.__get_quality(
+                identifier)
+            self.__update_metadata()
+
         logger.info('Saved classification')
 
     def save_pareidolia(self, pareidolia: pd.DataFrame, identifier: str):
@@ -323,9 +316,12 @@ class DataBase:
         pareidolia.to_csv(self.__get_path(identifier, 'pareidolia.csv'),
                           index=False)
 
-        self.metadata['data'][identifier]['quality'] = self.__get_quality(
-            identifier)
         self.__update_metadata()
+
+        if self.metadata['data'][identifier]['created classification']:
+            self.metadata['data'][identifier]['quality'] = self.__get_quality(
+                identifier)
+            self.__update_metadata()
 
         logger.info('Saved pareidolia')
 
@@ -339,26 +335,16 @@ class DataBase:
         logger.info(f'Loaded orig from {identifier}')
         return orig
 
-    def load_orig_id_by_empty_mask(self) -> str:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            img = str(img)
-            if not self.metadata['data'][img]['created mask']:
-                identifier = img
+    def load_id(self, contains: str, contains_not: str) -> str:
+        out = None
+        for identifier in range(1, len(self.metadata['data']) + 1):
+            img = self.metadata['data'][str(identifier)]
+            if not img['deleted'] and not img['compressed'] \
+                    and img[contains] and not img[contains_not]:
+                out = str(identifier)
                 break
 
-        return identifier
-
-    def load_orig_id_by_empty_analysis(self) -> Optional[str]:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            img = str(img)
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created analysis']:
-                    identifier = img
-                    break
-
-        return identifier
+        return out
 
     def load_mask(self, identifier: str) -> np.ndarray:
         logger.debug(f'Attempting to load mask from {identifier}')
@@ -375,34 +361,9 @@ class DataBase:
         logger.info(f'Loaded mask from {identifier}')
         return mask
 
-    def load_mask_id_by_empty_analysis(self) -> Optional[str]:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            img = str(img)
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created analysis'] and \
-                        self.metadata['data'][img]['created mask']:
-                    identifier = img
-                    break
-
-        return identifier
-
-    def load_mask_id_by_empty_pareidolia(self) -> Optional[str]:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            img = str(img)
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created pareidolia'] and \
-                        self.metadata['data'][img]['created mask']:
-                    identifier = img
-                    break
-
-        return identifier
-
     def load_analysis(self, identifier: str) -> pd.DataFrame:
         logger.debug(f'Attempting to load analysis from {identifier}')
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created analysis']:
@@ -412,19 +373,6 @@ class DataBase:
         analysis = pd.read_csv(self.__get_path(identifier, 'analysis.csv'))
         logger.info(f'Loaded analysis from {identifier}')
         return analysis
-
-    def load_analysis_id_by_empty_classification(self) \
-            -> Optional[str]:
-        identifier = None
-        for img in range(1, len(self.metadata['data']) + 1):
-            img = str(img)
-            if img in self.metadata['data']:
-                if not self.metadata['data'][img]['created classification']:
-                    if self.metadata['data'][img]['created analysis']:
-                        identifier = img
-                        break
-
-        return identifier
 
     def load_classification(self, identifier: str) -> pd.DataFrame:
         logger.debug(f'Attempting to load classification from {identifier}')

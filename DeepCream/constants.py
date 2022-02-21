@@ -13,8 +13,9 @@ def get_time() -> str:
     return datetime.today().strftime(TIME_FORMAT)
 
 
-FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: %(threadName)s: %(funcName)s: ' \
-                      'line %(lineno)d: %(levelname)s: %(message)s'
+FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
+                      '%(funcName)s: line %(lineno)d: %(levelname)s: ' \
+                      '%(message)s'
 
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '

@@ -2,6 +2,7 @@ import logging
 import os.path
 import time
 import traceback
+
 import DeepCream
 from DeepCream.constants import ABS_PATH
 
@@ -19,15 +20,17 @@ while int(time.time() - start_time) < runtime and not finished:
         # Instances DeepCream
         deepcream = DeepCream.initialize(
             os.path.join(ABS_PATH, 'data', 'input'),
-            tpu_support=False, pi_camera=False, capture_resolution=(2592, 1952))
+            tpu_support=False, pi_camera=False,
+            capture_resolution=(2592, 1952))
         logger.info('Initialised DeepCream')
         # Calculates the remaining execution time (minus 2 minutes as buffer)
         allowed_execution_time = runtime - (
             int(time.time() - start_time)) - 120
         if allowed_execution_time > 0:
             # Starts the DeepCream module
-            logger.info(f'Calling DeepCream.run with {allowed_execution_time}s '
-                        f'of execution time')
+            logger.info(
+                f'Calling DeepCream.run with {allowed_execution_time}s '
+                f'of execution time')
             deepcream.run(allowed_execution_time)
             # When the DeepCream module finished the loop will end before the three hours are over
             finished = True
@@ -46,12 +49,15 @@ while int(time.time() - start_time) < runtime and not finished:
         finished = True
         logger.info(
             f'DeepCream execution time: {int(time.time() - start_time)}s')
-    except KeyboardInterrupt as e:
-        # Catches and keyboard interrupts and halts the program
-        raise e
-    except Exception as e:
+    except BaseException as e:
         # Catches all other exceptions and logs them
         logger.error(traceback.format_exc())
+    except Exception as e:
+        deepcream.alive = False
+        raise e from e
+    finally:
+        if finished:
+            deepcream.alive = False
 
 # Gets the current time as end time
 end_time = time.time()

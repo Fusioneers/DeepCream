@@ -39,4 +39,5 @@ logger.info('Initialised logger')
 # This function just makes it more convenient to initialize the DeepCream module
 def initialize(directory, tpu_support: bool = False,
                pi_camera: bool = False, capture_resolution=(2592, 1952)):
-    return DeepCreamClass(directory, tpu_support, pi_camera, capture_resolution)
+    return DeepCreamClass(directory, tpu_support, pi_camera,
+                          capture_resolution)

@@ -4,6 +4,7 @@ import random
 import threading as th
 import time as t
 from queue import Queue
+import traceback
 
 import cv2 as cv
 import numpy as np
@@ -11,13 +12,13 @@ import numpy as np
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
-from DeepCream.pareidolia.pareidolia import Pareidolia
 from DeepCream.constants import (DEBUG_MODE,
                                  ABS_PATH,
                                  QUEUE_MAX_SIZE,
                                  get_time,
                                  )
 from DeepCream.database import DataBase
+from DeepCream.pareidolia.pareidolia import Pareidolia
 
 logger = logging.getLogger('DeepCream.deepcream')
 
@@ -25,14 +26,11 @@ max_num_clouds = 15
 max_border_proportion = 1
 
 
-# TODO add manual database.compress/delete, because images which pass the
-#  review but have a empty mask or no valid clouds block the entire chain
-
 # TODO test what happens at night
 
 # TODO implement quality
 
-# TODO if run fails lot in a single run, create a new database
+# TODO if run fails a lot in a single run, create a new database
 
 # TODO check quality threshold, the compression is not working
 
@@ -43,11 +41,15 @@ def thread(name: str):
         def wrapper(self, *args, **kwargs):
             logger.info(f'Started thread {name}')
             while self.alive:
-                t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
-                dtime = t.time()
-                func(self, *args, **kwargs)
-                setattr(self, f'_DeepCream__duration_{name}',
-                        (t.time() - dtime))
+                try:
+                    t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
+                    dtime = t.time()
+                    func(self, *args, **kwargs)
+                    setattr(self, f'_DeepCream__duration_{name}',
+                            (t.time() - dtime))
+                except BaseException as e:
+                    with self.lock:
+                        logger.error(traceback.format_exc())
             logger.info(f'Finished thread {name}')
 
         return wrapper
@@ -233,7 +235,6 @@ class DeepCream:
             self.__delay_get_analysis_pareidolia, \
             self.__delay_save_pareidolia = get_delay('get_analysis_pareidolia',
                                                      'save_pareidolia')
-
         self.alive = False
         logger.info('Finished running')
 
@@ -260,8 +261,8 @@ class DeepCream:
             orig = self.orig_review_queue.get()
             gray = cv.cvtColor(orig, cv.COLOR_RGB2GRAY)
 
-            # The values are set so that bad images certainly will be filtered out,
-            # but that might also lead to good images being filtered out
+            # The values are set so that bad images certainly will be filtered
+            # out, but that might also lead to good images being filtered out
             if cv.mean(gray)[0] < 55 or cv.mean(gray)[0] > 125:
                 out = False
             else:
@@ -280,12 +281,18 @@ class DeepCream:
     @thread('get_mask')
     def __get_mask(self):
         with self.lock:
-            identifier = self.database.load_orig_id_by_empty_mask()
+            identifier = self.database.load_id('orig creation time',
+                                               'created mask')
         if identifier is not None:
             with self.lock:
                 orig = self.database.load_orig(identifier)
             mask = self.cloud_detection.evaluate_image(orig).astype(
                 'uint8') * 255
+            if not np.count_nonzero(mask):
+                logger.warning(
+                    'There are no clouds on the image, attempting to '
+                    f'delete orig {identifier}')
+                self.database.delete_orig(identifier)
             self.mask_queue.put((mask, identifier))
 
     @thread('save_mask')
@@ -299,7 +306,8 @@ class DeepCream:
     @thread('get_analysis_pareidolia')
     def __get_analysis_pareidolia(self):
         with self.lock:
-            identifier = self.database.load_orig_id_by_empty_analysis()
+            identifier = self.database.load_id('created mask',
+                                               'created analysis')
         if identifier is not None:
             with self.lock:
                 orig = self.database.load_orig(identifier)
@@ -313,6 +321,11 @@ class DeepCream:
             if mask is not None:
                 analysis = Analysis(orig, mask, max_num_clouds,
                                     max_border_proportion)
+
+                if not analysis.clouds:
+                    logger.warning('There are no valid clouds on the image,'
+                                   f' attempting to delete orig {identifier}')
+                    self.database.delete_orig(identifier)
 
                 df = analysis.evaluate()
                 self.analysis_queue.put((df, identifier))
@@ -339,8 +352,8 @@ class DeepCream:
     @thread('get_classification')
     def __get_classification(self):
         with self.lock:
-            identifier = self.database. \
-                load_analysis_id_by_empty_classification()
+            identifier = self.database.load_id('created analysis',
+                                               'created classification')
         if identifier is not None:
             with self.lock:
                 analysis = self.database.load_analysis(identifier)

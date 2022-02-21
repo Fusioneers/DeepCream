@@ -205,8 +205,9 @@ class Analysis:
                             key=lambda iter_cloud:
                             getattr(iter_cloud, 'contour_area'), reverse=True)
 
-        def check_valid(input_cloud):
-            edges = input_cloud.edges(border_width, border_width,
+        def check_valid(input_cloud: Analysis.Cloud):
+            edges = input_cloud.edges(DEFAULT_BORDER_WIDTH,
+                                      DEFAULT_BORDER_WIDTH,
                                       convex_hull=True)
             if not edges.size:
                 out = False
@@ -251,7 +252,7 @@ class Analysis:
                 diff_edges = cloud.diff_edges(50,
                                               200)
             except ValueError as err:
-                logger.warning(err)
+                logger.debug(err)
                 continue
 
             df.loc[j, ['center x']] = cloud.center[0]
