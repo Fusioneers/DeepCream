@@ -260,11 +260,9 @@ class DeepCream:
             orig = self.orig_review_queue.get()
             gray = cv.cvtColor(orig, cv.COLOR_RGB2GRAY)
 
-            # TODO find ideal values
-            if cv.mean(gray)[0] < 20 or cv.mean(gray)[0] > 150:
-                out = False
-            # TODO take the average of the four corners (bigger than 1px)
-            elif gray[0][0] > 20:
+            # The values are set so that bad images certainly will be filtered out,
+            # but that might also lead to good images being filtered out
+            if cv.mean(gray)[0] < 55 or cv.mean(gray)[0] > 125:
                 out = False
             else:
                 out = True
