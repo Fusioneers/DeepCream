@@ -19,6 +19,7 @@ from DeepCream.constants import (DEBUG_MODE,
                                  DEFAULT_DELAY,
                                  )
 from DeepCream.database import DataBase
+from DeepCream.pareidolia.pareidolia import Pareidolia
 
 logger = logging.getLogger('DeepCream.deepcream')
 
@@ -52,7 +53,9 @@ class DeepCream:
         self.capture_resolution = capture_resolution
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
+        self.pareidolia = Pareidolia(tpu_support=tpu_support)
         self.classification = Classification()
+
         if DEBUG_MODE:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
@@ -318,8 +321,10 @@ class DeepCream:
                                                   identifier)
 
     @thread('get_pareidolia')
-    def __get_pareidolia(self):
-        pass
+    def __get_pareidolia(self, orig):
+        # probabilities are just an array with all the probabilities and label is the label of the most likely
+        # prediction
+        probabilities, label = self.pareidolia.evaluate_image(orig)
 
     @thread('save_pareidolia')
     def __save_pareidolia(self):

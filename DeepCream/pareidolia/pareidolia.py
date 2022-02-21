@@ -6,6 +6,7 @@ from PIL import Image, ImageOps
 import tensorflow as tf
 from numpy import asarray
 from pycoral.utils import edgetpu
+from typing import Tuple
 
 from DeepCream.constants import ABS_PATH
 
@@ -66,7 +67,7 @@ class Pareidolia:
         else:
             raise ValueError('No AI was configured')
 
-    def evaluate_image(self, image: np.ndarray) -> str:
+    def evaluate_image(self, image: np.ndarray) -> Tuple[np.ndarray, str]:
 
         normal = self.__load_image(image)
 
@@ -83,14 +84,4 @@ class Pareidolia:
 
         label = pb.labels[str(np.argmax(pred))]
 
-        return label
-
-
-if __name__ == '__main__':
-    pb = Pareidolia(tpu_support=False)
-
-    img = cv2.imread(os.path.join(ABS_PATH, 'data/input/camel.jpg'))
-
-    res = pb.evaluate_image(img)
-
-    print(res)
+        return pred, label
