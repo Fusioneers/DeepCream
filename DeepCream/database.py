@@ -125,7 +125,7 @@ class DataBase:
             raise ValueError(f'Tried to compress image {identifier} which has '
                              f'no quality')
 
-    def __delete_orig(self, identifier: str):
+    def delete_orig(self, identifier: str):
         logger.debug(f'Attempting to delete orig {identifier}')
         try:
             os.remove(self.__get_path(identifier, 'orig.jpg'))

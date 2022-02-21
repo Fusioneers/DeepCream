@@ -194,10 +194,6 @@ class DeepCream:
             # print(self.__delay_get_mask + self.__duration_get_mask
             #       - self.__delay_save_mask - self.__delay_save_mask)
 
-            # TODO instead of controlling speed wait til a threshold is reached
-            #   this could raise the problem that during a dark period the
-            #   entire program is stopping
-
             # orig based threads
             self.__delay_get_orig, self.__delay_review_orig = get_delay(
                 'get_orig', 'review_orig')
@@ -242,7 +238,8 @@ class DeepCream:
     def __get_orig(self):
         if self.camera:
             orig = np.empty(
-                (self.capture_resolution[1], self.capture_resolution[0], 3), dtype=np.uint8)
+                (self.capture_resolution[1], self.capture_resolution[0], 3),
+                dtype=np.uint8)
             self.camera.capture(orig, 'rgb')
         else:
             # Returns a random (RGB) image (placeholder until real camera)
