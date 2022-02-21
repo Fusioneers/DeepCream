@@ -25,6 +25,19 @@ max_num_clouds = 15
 max_border_proportion = 1
 
 
+# TODO add manual database.compress/delete, because images which pass the
+#  review but have a empty mask or no valid clouds block the entire chain
+
+# TODO test what happens at night
+
+# TODO implement quality
+
+# TODO if run fails lot in a single run, create a new database
+
+# TODO check quality threshold, the compression is not working
+
+# TODO add kill switch if some function takes too long
+
 def thread(name: str):
     def decorator(func):
         def wrapper(self, *args, **kwargs):
