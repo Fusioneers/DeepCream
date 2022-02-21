@@ -18,6 +18,10 @@ from DeepCream.constants import (DEBUG_MODE,
                                  get_time,
                                  DEFAULT_DELAY,
                                  MAX_TIME,
+                                 INVALID_ORIG_COUNT_THRESHOLD,
+                                 NIGHT_IMAGE_PRIORITY,
+                                 ORIG_PRIORITISATION_ERROR_PENALTY,
+                                 ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE,
                                  )
 from DeepCream.database import DataBase
 from DeepCream.pareidolia.pareidolia import Pareidolia
@@ -32,11 +36,7 @@ max_border_proportion = 1
 
 # TODO implement quality
 
-# TODO if run fails a lot in a single run, create a new database
-
 # TODO check quality threshold, the compression is not working
-
-# TODO add kill switch if some function takes too long
 
 def thread(name: str):
     def timer(self, max_time: float, finished: bool):
@@ -54,27 +54,30 @@ def thread(name: str):
             with self.lock:
                 self.alive = False
 
+    def run(self, func, *args, **kwargs):
+        t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
+        finished = False
+        th_timer = th.Thread(target=timer,
+                             args=(self, MAX_TIME, finished),
+                             daemon=True)
+        th_timer.start()
+        dtime = t.time()
+        func(self, *args, **kwargs)
+        finished = True
+        setattr(self, f'_DeepCream__duration_{name}',
+                (t.time() - dtime))
+
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             logger.info(f'Started thread {name}')
             while self.alive:
                 try:
-                    t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
-                    finished = False
-                    th_timer = th.Thread(target=timer,
-                                         args=(self, MAX_TIME, finished),
-                                         daemon=True)
-                    th_timer.start()
-                    dtime = t.time()
-                    func(self, *args, **kwargs)
-                    finished = True
-                    setattr(self, f'_DeepCream__duration_{name}',
-                            (t.time() - dtime))
-
-                except (MemoryError, KeyboardInterrupt) as e:
+                    run(self, func, *args, **kwargs)
+                except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
                     with self.lock:
                         logger.critical(traceback.format_exc())
-                        raise e from e
+                        self.alive = False
+                        return
                 except BaseException as e:
                     with self.lock:
                         logger.error(traceback.format_exc())
@@ -91,8 +94,21 @@ class DeepCream:
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
+        if False:
+            self.database = DataBase(
+                os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
+        else:
+            self.database = DataBase(
+                os.path.join(ABS_PATH, 'data', 'database'))
+
         self.alive = True
-        self.lock = th.Lock()
+
+        # The priority of taking images. A value of 0 means no specific trend.
+        # A high value urges the program to take more pictures, negative values
+        # slow that down.
+        self.orig_priority = 0
+
+        self.invalid_orig_rate = 0
 
         if pi_camera:
             try:
@@ -100,9 +116,9 @@ class DeepCream:
                 self.camera = PiCamera()
                 self.camera.resolution = capture_resolution
                 self.camera.framerate = 15
-            except KeyboardInterrupt as e:
-                logger.error(e)
-                raise KeyboardInterrupt from e
+            except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+                logger.critical(e)
+                return
             except Exception as e:
                 logger.error('Camera not configured: ', str(e))
                 raise ValueError('Camera not configured')
@@ -114,12 +130,7 @@ class DeepCream:
         self.classification = Classification()
         self.pareidolia = Pareidolia(tpu_support=False)
 
-        if DEBUG_MODE:
-            self.database = DataBase(
-                os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
-        else:
-            self.database = DataBase(
-                os.path.join(ABS_PATH, 'data', 'database'))
+        self.lock = th.Lock()
 
         self.orig_review_queue = Queue(maxsize=QUEUE_MAX_SIZE)
         self.orig_queue = Queue(maxsize=QUEUE_MAX_SIZE)
@@ -226,50 +237,79 @@ class DeepCream:
                 new_start_delay = end_duration - start_duration
                 return new_start_delay, 0
 
+        def adjust_delays():
+            # orig based threads
+            self.__delay_get_orig, self.__delay_review_orig = get_delay(
+                'get_orig', 'review_orig')
+            self.__delay_review_orig, self.__delay_save_orig = get_delay(
+                'review_orig', 'save_orig')
+            delay_save_orig_a, self.__delay_get_mask = get_delay(
+                'save_orig', 'get_mask')
+            delay_save_orig_b, delay_get_analysis_pareidolia_a = get_delay(
+                'save_orig', 'get_analysis_pareidolia')
+            self.__delay_save_orig = max(delay_save_orig_a,
+                                         delay_save_orig_b)
+
+            # mask based threads
+            self.__delay_get_mask, self.__delay_save_mask = get_delay(
+                'get_mask', 'save_mask')
+            self.__delay_save_mask, \
+            delay_get_analysis_pareidolia_b = get_delay(
+                'save_mask', 'get_analysis_pareidolia')
+            self.__delay_save_mask *= 0.75
+
+            # analysis based threads
+            self.__delay_get_analysis_pareidolia, \
+            self.__delay_save_analysis = get_delay(
+                'get_analysis_pareidolia', 'save_analysis')
+            self.__delay_get_analysis_pareidolia = min(
+                delay_get_analysis_pareidolia_a,
+                delay_get_analysis_pareidolia_b)
+            self.__delay_save_analysis, self.__delay_get_classification \
+                = get_delay('save_analysis', 'get_classification')
+            self.__delay_get_classification, \
+            self.__delay_save_classification = get_delay(
+                'get_classification', 'save_classification')
+
+            # pareidolia based threads
+            self.__delay_get_analysis_pareidolia, \
+            self.__delay_save_pareidolia = get_delay(
+                'get_analysis_pareidolia', 'save_pareidolia')
+
+        def check_orig_priority():
+            if self.orig_priority < 0:
+                self.__delay_get_orig = self.orig_priority ** 2
+                self.__delay_review_orig = self.orig_priority ** 2
+                self.__delay_save_orig = self.orig_priority ** 2
+                self.__delay_get_mask = 0
+                self.__delay_save_mask = 0
+                self.__delay_get_analysis_pareidolia = 0
+                self.__delay_save_analysis = 0
+                self.__delay_save_pareidolia = 0
+                self.__delay_get_classification = 0
+                self.__delay_save_classification = 0
+                logger.debug('Adjusted delays')
+
+        def check_invalid_orig_count():
+            self.orig_priority += ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE
+            if self.invalid_orig_rate > INVALID_ORIG_COUNT_THRESHOLD:
+                logger.warning('There are a lot of invalid images, attempting '
+                               'to adjust delays')
+                self.orig_priority = NIGHT_IMAGE_PRIORITY
+            if self.invalid_orig_rate == 0:
+                self.orig_priority = 0
+
         while self.alive:
             try:
                 t.sleep(DEFAULT_DELAY)
-
-                # orig based threads
-                self.__delay_get_orig, self.__delay_review_orig = get_delay(
-                    'get_orig', 'review_orig')
-                self.__delay_review_orig, self.__delay_save_orig = get_delay(
-                    'review_orig', 'save_orig')
-                delay_save_orig_a, self.__delay_get_mask = get_delay(
-                    'save_orig', 'get_mask')
-                delay_save_orig_b, delay_get_analysis_pareidolia_a = get_delay(
-                    'save_orig', 'get_analysis_pareidolia')
-                self.__delay_save_orig = max(delay_save_orig_a,
-                                             delay_save_orig_b)
-
-                # mask based threads
-                self.__delay_get_mask, self.__delay_save_mask = get_delay(
-                    'get_mask', 'save_mask')
-                self.__delay_save_mask, \
-                delay_get_analysis_pareidolia_b = get_delay(
-                    'save_mask', 'get_analysis_pareidolia')
-                self.__delay_save_mask *= 0.75
-
-                # analysis based threads
-                self.__delay_get_analysis_pareidolia, \
-                self.__delay_save_analysis = get_delay(
-                    'get_analysis_pareidolia', 'save_analysis')
-                self.__delay_get_analysis_pareidolia = min(
-                    delay_get_analysis_pareidolia_a,
-                    delay_get_analysis_pareidolia_b)
-                self.__delay_save_analysis, self.__delay_get_classification \
-                    = get_delay('save_analysis', 'get_classification')
-                self.__delay_get_classification, \
-                self.__delay_save_classification = get_delay(
-                    'get_classification', 'save_classification')
-
-                # pareidolia based threads
-                self.__delay_get_analysis_pareidolia, \
-                self.__delay_save_pareidolia = get_delay(
-                    'get_analysis_pareidolia', 'save_pareidolia')
-
-            except (MemoryError, KeyboardInterrupt) as e:
-                logger.critical(traceback.format_exc())
+                adjust_delays()
+                check_orig_priority()
+                check_invalid_orig_count()
+            except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+                with self.lock:
+                    logger.critical(traceback.format_exc())
+                    self.alive = False
+                    return
             except BaseException as e:
                 with self.lock:
                     logger.error(traceback.format_exc())
@@ -308,12 +348,22 @@ class DeepCream:
             if out:
                 self.orig_queue.put(orig)
 
+                if self.invalid_orig_rate > 0:
+                    self.invalid_orig_rate -= 1
+            else:
+                if not self.invalid_orig_rate > INVALID_ORIG_COUNT_THRESHOLD:
+                    self.invalid_orig_rate += 1
+
     @thread('save_orig')
     def __save_orig(self):
         if not self.orig_queue.empty():
             orig = self.orig_queue.get()
-            with self.lock:
-                self.database.save_orig(orig)
+            try:
+                with self.lock:
+                    self.database.save_orig(orig)
+            except DataBase.OrigPrioritisationError as e:
+                logger.error(e)
+                self.orig_priority -= ORIG_PRIORITISATION_ERROR_PENALTY
 
     @thread('get_mask')
     def __get_mask(self):
@@ -330,6 +380,7 @@ class DeepCream:
                     'There are no clouds on the image, attempting to '
                     f'delete orig {identifier}')
                 self.database.delete_orig(identifier)
+                self.invalid_orig_rate += 1
             self.mask_queue.put((mask, identifier))
 
     @thread('save_mask')
@@ -364,6 +415,7 @@ class DeepCream:
                     logger.warning('There are no valid clouds on the image,'
                                    f' attempting to delete orig {identifier}')
                     self.database.delete_orig(identifier)
+                    self.invalid_orig_rate += 1
 
                 df = analysis.evaluate()
                 self.analysis_queue.put((df, identifier))

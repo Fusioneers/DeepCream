@@ -8,8 +8,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 
-from DeepCream.constants import (DEBUG_MODE,
-                                 get_time,
+from DeepCream.constants import (get_time,
                                  MAX_DATABASE_SIZE,
                                  QUALITY_THRESHOLD,
                                  )
@@ -20,6 +19,11 @@ logger.info('Initialised database')
 
 
 class DataBase:
+    class OrigPrioritisationError(MemoryError):
+        pass
+
+    class DataBaseFullError(MemoryError):
+        pass
 
     def __init__(self, directory):
         self.base_dir = directory
@@ -50,6 +54,11 @@ class DataBase:
             }
 
             self.__update_metadata()
+
+            if self.__check_full():
+                raise DataBase.DataBaseFullError(
+                    f'The database is too large with size '
+                    f'{self.metadata["metadata"]["size"]}')
             logger.info('Created database')
 
     def __update_metadata(self):
@@ -104,6 +113,9 @@ class DataBase:
 
         return np.sqrt(max_classification ** 2 + max_pareidolia ** 2)
 
+    def __check_full(self):
+        return self.metadata['metadata']['size'] > MAX_DATABASE_SIZE
+
     def __compress_orig(self, identifier: str):
         logger.debug(f'Attempting to compress image {identifier}')
         if self.metadata['data'][identifier]['quality']:
@@ -153,10 +165,15 @@ class DataBase:
                        value['quality'] and not value['deleted']]
 
         if not not_deleted:
-            logger.critical(
-                'There are no evaluated and not yet deleted images available')
-            raise MemoryError(
-                'There are no evaluated and not yet deleted images available')
+            no_quality = [key for key, value in self.metadata['data'].items()
+                          if not value['deleted']]
+            if no_quality:
+                raise DataBase.OrigPrioritisationError('There are too many '
+                                                       'images without quality')
+            else:
+                raise DataBase.DataBaseFullError(
+                    'There are no not yet deleted images '
+                    'available')
 
         not_compressed = list(
             filter(lambda x: not self.__get_param(x, 'compressed'),
