@@ -28,7 +28,7 @@ max_border_proportion = 1
 
 class DeepCream:
     def __init__(self, directory: str, tpu_support: bool = False,
-                 pi_camera: bool = False, capture_resolution=(2560, 1920)):
+                 pi_camera: bool = False, capture_resolution=(2592, 1952)):
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
@@ -214,7 +214,7 @@ class DeepCream:
     def __get_orig(self):
         if self.camera:
             orig = np.empty(
-                (self.capture_resolution[1], self.capture_resolution[0], 3))
+                (self.capture_resolution[1], self.capture_resolution[0], 3), dtype=np.uint8)
             self.camera.capture(orig, 'rgb')
         else:
             # Returns a random (RGB) image (placeholder until real camera)

@@ -125,8 +125,6 @@ class CloudDetection:
         # Compute the mask
         mask = self.__ai_generate_image_mask(scaled)
 
-        print(mask.shape)
-
         # Make the result binary
         _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,
                                 cv2.THRESH_BINARY)

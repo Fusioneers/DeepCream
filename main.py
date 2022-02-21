@@ -18,7 +18,7 @@ while int(time.time() - start_time) < runtime and not finished:
     try:
         deepcream = DeepCream.initialize(
             os.path.join(ABS_PATH, 'data', 'input'),
-            tpu_support=True, pi_camera=False)
+            tpu_support=True, pi_camera=False, capture_resolution=(2592, 1952))
         logger.info('Initialised DeepCream')
         allowed_execution_time = runtime - (
             int(time.time() - start_time)) - 120

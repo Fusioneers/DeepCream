@@ -39,5 +39,5 @@ logger.info('Initialised logger')
 
 
 def initialize(directory, tpu_support: bool = False,
-               pi_camera: bool = False, capture_resolution=(2560, 1920)):
+               pi_camera: bool = False, capture_resolution=(2592, 1952)):
     return DeepCreamClass(directory, tpu_support, pi_camera, capture_resolution)
