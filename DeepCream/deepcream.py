@@ -31,10 +31,6 @@ max_num_clouds = 15
 max_border_proportion = 1
 
 
-# TODO implement quality
-
-# TODO check quality threshold, the compression is not working
-
 def thread(name: str):
     class timeout:
         def __init__(self, deepcream, name, time):
