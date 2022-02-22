@@ -28,6 +28,7 @@ class CloudDetection:
             Whether the system supports a tpu. If true the cloud detection
             will use the edgetpu library from pycoral.utils, otherwise it will use
             keras to load the model. (False by default)
+
         """
 
         # Set thresholds for cloud detection
@@ -144,9 +145,6 @@ class CloudDetection:
         # Compute the mask
         mask = self.__ai_generate_image_mask(scaled)
 
-        # print(mask.shape)
-
-        # Make the result binary
         # Make the result binary (using the threshold from the beginning)
         _, mask = cv2.threshold(mask, self.binaryCloudThreshold, 1,
                                 cv2.THRESH_BINARY)
