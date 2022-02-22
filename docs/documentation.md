@@ -31,6 +31,15 @@ Source: https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/
 ## Classification
 
 ## Pareidolia
+In this part of our project, we attempt to simulate the phenomenon of pareidolia,
+which is the recognition of other objects in the form of things that occurs in humans.
+
+To achieve this, we used the MPEG-7 dataset to train a neural network that can classify shapes of more than 50 different everyday objects using binary masks.
+
+
+
+![](pareidolia/MPEG-7_01_overview.png)
+Source: https://www.researchgate.net/profile/Joao-Nunes-29/publication/245251999/figure/fig4/AS:668849762492443@1536477618671/The-MPEG-7-Core-Experiment-CE-Shape-1-dataset.png
 
 ## Database
 
