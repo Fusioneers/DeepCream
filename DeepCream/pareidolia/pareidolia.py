@@ -106,6 +106,7 @@ class Pareidolia:
         Returns:
             An array with the same length and order as the labels.txt in the models/keras and models/tflite
             folders. Each value in the array corresponds to the probability of the cloud image having that label.
+            The sum of the probabilities should always give 1.
 
         """
 
