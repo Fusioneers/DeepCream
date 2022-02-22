@@ -42,6 +42,7 @@ DEFAULT_VAL_THRESHOLD = 30
 # This is the upper quality portion used in the database free space procedure
 QUALITY_THRESHOLD = 0.2
 
+# The maximum size for the database
 MAX_DATABASE_SIZE = 2900 * (10 ** 6)
 
 # This is a list of features of a cloud returned by Analysis.evaluate
