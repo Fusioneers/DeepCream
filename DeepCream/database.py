@@ -315,7 +315,7 @@ class DataBase:
                           if not value['deleted']]
             if no_quality:
                 raise DataBase.OrigPrioritisationError('There are too many '
-                                                       'images without quality')
+                                                       'origs without quality')
             else:
                 raise DataBase.DataBaseFullError(
                     'There are no not yet deleted images '
