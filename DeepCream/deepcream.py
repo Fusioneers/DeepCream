@@ -5,7 +5,6 @@ import threading as th
 import time as t
 import traceback
 from queue import Queue
-
 import cv2 as cv
 import numpy as np
 
@@ -32,47 +31,41 @@ max_num_clouds = 15
 max_border_proportion = 1
 
 
-# TODO test what happens at night
-
 # TODO implement quality
 
 # TODO check quality threshold, the compression is not working
 
 def thread(name: str):
-    def timer(self, max_time: float, finished: bool):
-        dtime = t.time()
-        while self.alive and t.time() - dtime < max_time:
-            t.sleep(DEFAULT_DELAY)
-            if finished:
-                return
-        else:
-            if not self.alive:
-                return
-            logger.error(
-                f'The function {name} has taken an excessive amount of '
-                f'time, attempting to restart DeepCream')
-            with self.lock:
-                self.alive = False
+    class timeout:
+        def __init__(self, deepcream, name, time):
+            self.deepcream = deepcream
+            self.name = name
+            self.time = time
+            self.exit = False
 
-    def run(self, func, *args, **kwargs):
-        t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
-        finished = False
-        th_timer = th.Thread(target=timer,
-                             args=(self, MAX_TIME, finished),
-                             daemon=True)
-        th_timer.start()
-        dtime = t.time()
-        func(self, *args, **kwargs)
-        finished = True
-        setattr(self, f'_DeepCream__duration_{name}',
-                (t.time() - dtime))
+        def __enter__(self):
+            th.Thread(target=self.callme).start()
+
+        def callme(self):
+            t.sleep(self.time)
+            if not self.exit:
+                logger.error(f'The function {name} took too long')
+                self.deepcream.alive = False
+
+        def __exit__(self, a, b, c):
+            self.exit = True
 
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             logger.info(f'Started thread {name}')
             while self.alive:
                 try:
-                    run(self, func, *args, **kwargs)
+                    t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
+                    dtime = t.time()
+                    with timeout(self, name, MAX_TIME):
+                        func(self, *args, **kwargs)
+                    setattr(self, f'_DeepCream__duration_{name}',
+                            (t.time() - dtime))
                 except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
                     with self.lock:
                         logger.critical(traceback.format_exc())
@@ -94,7 +87,7 @@ class DeepCream:
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
-        if False:
+        if DEBUG_MODE:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
         else:

@@ -70,7 +70,7 @@ while time.time() - start_time < runtime and not finished:
         logger.info(
             f'DeepCream execution time: {int(time.time() - start_time)}s')
     except KeyboardInterrupt as e:
-        logger.critical(e)
+        logger.critical(traceback.format_exc())
         raise e from e
     except BaseException as e:
 
