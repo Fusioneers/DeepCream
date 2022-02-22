@@ -87,7 +87,7 @@ class Pareidolia:
 
         return pred
 
-    def evaluate_clouds(self, clouds: list[np.ndarray]) -> pd.DataFrame:
+    def evaluate_clouds(self, clouds: [np.ndarray]) -> pd.DataFrame:
         if not clouds:
             raise ValueError('There are clouds given')
 
@@ -104,7 +104,7 @@ class Pareidolia:
 if __name__ == '__main__':
     pb = Pareidolia(tpu_support=False)
 
-    img = cv2.imread(os.path.join(ABS_PATH, 'data/input/camel.jpg'))
+    img = cv2.imread(os.path.join(ABS_PATH, 'data/img.tif'))
 
     res = pb.evaluate_image(img)
 
