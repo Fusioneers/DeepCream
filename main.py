@@ -12,34 +12,36 @@ start_time = time.time()
 
 logger = logging.getLogger('DeepCream.main')
 finished = False
-runtime = 10800  # Maximum time the program is allowed to run (in seconds)
+runtime = 200  # 10800  # Maximum time the program is allowed to run (in seconds)
+buffer = 120  # Time the program is going to run shorter than the runtime to ensure it finishes in time
 
 
 def create_deepcream() -> DeepCream.deepcream.DeepCream:
     """Instantiates DeepCream"""
-    deepcream = DeepCream.initialize(
+    new_deepcream = DeepCream.initialize(
         os.path.join(ABS_PATH, 'data', 'input'),
         tpu_support=False, pi_camera=False,
         capture_resolution=(2592, 1952))
     logger.info('Initialised DeepCream')
 
-    deepcream.run()
+    new_deepcream.run()
     logger.info('Started DeepCream')
 
-    return deepcream
+    return new_deepcream
 
 
-# Loops as long as the three hours aren't over and the DeepCream module hasn't
-# finished
+# Instances DeepCream for the first time
 deepcream = create_deepcream()
+
+# Keeps DeepCream alive as long as the three hours aren't over and the DeepCream module hasn't
+# finished
 while time.time() - start_time < runtime and not finished:
     time.sleep(DEFAULT_DELAY)
 
     # Makes sure the DeepCream module keeps running for the whole time
     try:
-
-        # Calculates the remaining execution time (minus 2 minutes as buffer)
-        allowed_execution_time = runtime - time.time() + start_time - 120
+        # Calculates the remaining execution time (minus the buffer)
+        allowed_execution_time = runtime - time.time() + start_time - buffer
 
         # If any exception makes it up to this level, the whole class is
         # restarted
@@ -61,7 +63,6 @@ while time.time() - start_time < runtime and not finished:
             logger.info('DeepCream execution time: ' + str(
                 int(time.time() - start_time)) + 's')
     except DataBase.DataBaseFullError as err:
-
         # If the program runs out of memory (because the 3GB are reached) the
         # while loop will stop before the three hours are over
         logger.critical(
@@ -73,7 +74,6 @@ while time.time() - start_time < runtime and not finished:
         logger.critical(traceback.format_exc())
         raise e from e
     except BaseException as e:
-
         # Catches all other exceptions and logs them
         logger.error(traceback.format_exc())
         deepcream.alive = False
@@ -84,11 +84,8 @@ while time.time() - start_time < runtime and not finished:
 # Gets the current time as end time
 end_time = time.time()
 
-# TODO this is no longer true, the threads end themself if deepcream.alive is
-#  false
-
-# Prints out and logs the overall execution time of the program Note:
-# As mentioned in the documentation.md the threads might still be running at
+# Prints out and logs the overall execution time of the program
+# Note: As mentioned in the documentation.md the threads might still be running at
 # this point, but they are sure to run out before the 2 minutes of buffer are
 # over
 logger.info(f'Overall execution time: {int(end_time - start_time)}s')
