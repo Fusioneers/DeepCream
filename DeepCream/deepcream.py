@@ -54,7 +54,12 @@ def thread(name: str) -> Callable:
     """
 
     class timeout:
-        """This class supervises the time a function takes to execute."""
+        """This class supervises the time a function takes to execute.
+
+        timeout is used as a context manager, which starts a thread which sets
+        DeepCream.alive to False if the time is up. This prevents infinite
+        loops.
+        """
 
         def __init__(self, deepcream, name, time):
             self.deepcream = deepcream
@@ -85,16 +90,24 @@ def thread(name: str) -> Callable:
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             logger.info(f'Started thread {name}')
+
+            # As long as DeepCream is alive, the thread executes. If a critical
+            # error occurs, the thread has still time to finish its current
+            # execution.
             while self.alive:
                 try:
                     t.sleep(getattr(self, f'_DeepCream__delay_{name}'))
                     dtime = t.time()
                     with timeout(self, name, MAX_TIME):
                         func(self, *args, **kwargs)
+
+                    # The time the function took is stored in the duration
+                    # field.
                     setattr(self, f'_DeepCream__duration_{name}',
                             (t.time() - dtime))
                 except (DataBase.DataBaseFullError, SystemExit,
                         KeyboardInterrupt) as e:
+
                     # In case of a critical error, DeepCream is stopped
                     with self.lock:
                         logger.critical(traceback.format_exc())
@@ -188,7 +201,7 @@ class DeepCream:
     """
 
     def __init__(self, directory: str, tpu_support: bool = False,
-                 pi_camera: bool = False, capture_resolution=(2592, 1952)):
+                 runs_on_pi: bool = False, capture_resolution=(2592, 1952)):
         """Initialises DeepCream.
 
         Args:
@@ -198,7 +211,7 @@ class DeepCream:
             tpu_support:
             Whether a tpu is connected to the astro pi.
 
-            pi_camera:
+            runs_on_pi:
             Whether a camera is connected to the astro pi.
 
             capture_resolution:
@@ -223,8 +236,9 @@ class DeepCream:
 
         self.invalid_orig_rate = 0
 
-        if pi_camera:
+        if runs_on_pi:
             try:
+                # The camera is initialised
                 from picamera import PiCamera
                 self.camera = PiCamera()
                 self.camera.resolution = capture_resolution
@@ -293,6 +307,7 @@ class DeepCream:
 
         logger.debug('Initialised threads')
 
+        # The delays and durations are initialized with 1s each
         self.__delay_get_orig = 1
         self.__delay_review_orig = 1
         self.__delay_get_mask = 1
@@ -382,7 +397,6 @@ class DeepCream:
             return max_duration - duration
 
         def adjust_delays():
-
             self.__delay_get_orig = get_delay('get_orig')
             self.__delay_review_orig = get_delay('review_orig')
             self.__delay_save_orig = get_delay('save_orig')
@@ -419,7 +433,6 @@ class DeepCream:
 
                 save_classification_time = self.__delay_save_classification + \
                                            self.__duration_save_classification
-
                 logger.debug(
                     f'Current save_classification time is '
                     f'{save_classification_time} seconds per image')
@@ -435,6 +448,10 @@ class DeepCream:
             except BaseException as e:
                 with self.lock:
                     logger.error(traceback.format_exc())
+        # To ensure that different DeepCream instances do not use the camera
+        # at the same time, the connection is closed when the instance exits.
+        if self.camera is not None:
+            self.camera.close()
 
     @thread('get_orig')
     def __get_orig(self):
@@ -485,6 +502,7 @@ class DeepCream:
             else:
                 if not self.invalid_orig_rate > INVALID_ORIG_COUNT_THRESHOLD:
                     self.invalid_orig_rate += 1
+                logger.debug('This image is invalid')
 
     @thread('save_orig')
     def __save_orig(self):
@@ -513,6 +531,9 @@ class DeepCream:
         if identifier is not None:
             with self.lock:
                 orig = self.database.load_orig(identifier)
+            # The multiplication is for the computation not necessary, but
+            # changes the a-little-bit-lighter-than-black in the clouds to
+            # pure white so that humans can see the contours more easily.
             mask = self.cloud_detection.evaluate_image(orig).astype(
                 'uint8') * 255
             if not np.count_nonzero(mask):

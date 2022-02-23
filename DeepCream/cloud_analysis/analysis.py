@@ -270,7 +270,8 @@ class Analysis:
                                               200)
             except ValueError as err:
                 # This ValueError is raised when the cloud has no valid spans
-                # i.e. it is located at the very edge of the image
+                # i.e. it is located at the very edge of the image. This is
+                # called invalid and further used in the deepcream module.
                 logger.debug(err)
                 continue
 
