@@ -69,7 +69,7 @@ def thread(name: str) -> Callable:
         def callme(self):
             dtime = t.time()
             while t.time() - dtime < self.time and not self.exit:
-                t.sleep(DEFAULT_DELAY)
+                t.sleep(0.01)
             if not self.exit:
                 logger.error(f'The function {name} took too long')
                 self.deepcream.alive = False
@@ -343,73 +343,54 @@ class DeepCream:
         taking of images can happen way faster than the generation of the
         masks. An instability is not desired because every image needs to
         undergo all threads and unclassified images do more harm than good.
-        The delay_supervisor adds and updates delay to the threads so that
-        the overall frequency of the threads is the same.
+        The delay_supervisor adds and updates delays to the threads so that
+        the overall frequency of the threads is the same. This mechanism is
+        paused if the orig_priority is below 0. In this case the
+        delay_supervisor sets the get_orig, review_orig and save_orig delays
+        to orig_priority ** 2, and the other delays to 0.
         """
 
-        def get_delay(start, end):
-            start_delay = getattr(self, f'_DeepCream__delay_{start}')
-            start_duration = getattr(self, f'_DeepCream__duration_{start}')
-            end_duration = getattr(self, f'_DeepCream__duration_{end}')
-            delay = start_delay + start_duration - end_duration
-            if delay >= 0:
-                return start_delay, delay
-            else:
-                new_start_delay = end_duration - start_duration
-                return new_start_delay, 0
+        def get_max_duration():
+            durations = [self.__duration_get_orig,
+                         self.__duration_review_orig,
+                         self.__duration_save_orig,
+                         self.__duration_get_mask,
+                         self.__duration_save_mask,
+                         self.__duration_get_analysis_pareidolia,
+                         self.__duration_save_analysis,
+                         self.__duration_save_pareidolia,
+                         self.__duration_get_classification,
+                         self.__duration_save_classification]
+
+            max_duration = max(durations)
+            return max_duration
+
+        def get_delay(name):
+            max_duration = get_max_duration()
+            duration = getattr(self, f'_DeepCream__duration_{name}')
+            return max_duration - duration
 
         def adjust_delays():
-            # orig based threads
-            self.__delay_get_orig, self.__delay_review_orig = get_delay(
-                'get_orig', 'review_orig')
-            self.__delay_review_orig, self.__delay_save_orig = get_delay(
-                'review_orig', 'save_orig')
-            delay_save_orig_a, self.__delay_get_mask = get_delay(
-                'save_orig', 'get_mask')
-            delay_save_orig_b, delay_get_analysis_pareidolia_a = get_delay(
-                'save_orig', 'get_analysis_pareidolia')
-            self.__delay_save_orig = max(delay_save_orig_a,
-                                         delay_save_orig_b)
 
-            # mask based threads
-            self.__delay_get_mask, self.__delay_save_mask = get_delay(
-                'get_mask', 'save_mask')
-            self.__delay_save_mask, \
-            delay_get_analysis_pareidolia_b = get_delay(
-                'save_mask', 'get_analysis_pareidolia')
-            self.__delay_save_mask *= 0.75
-
-            # analysis based threads
-            self.__delay_get_analysis_pareidolia, \
-            self.__delay_save_analysis = get_delay(
-                'get_analysis_pareidolia', 'save_analysis')
-            self.__delay_get_analysis_pareidolia = min(
-                delay_get_analysis_pareidolia_a,
-                delay_get_analysis_pareidolia_b)
-            self.__delay_save_analysis, self.__delay_get_classification \
-                = get_delay('save_analysis', 'get_classification')
-            self.__delay_get_classification, \
-            self.__delay_save_classification = get_delay(
-                'get_classification', 'save_classification')
-
-            # pareidolia based threads
-            self.__delay_get_analysis_pareidolia, \
-            self.__delay_save_pareidolia = get_delay(
-                'get_analysis_pareidolia', 'save_pareidolia')
+            self.__delay_get_orig = get_delay('get_orig')
+            self.__delay_review_orig = get_delay('review_orig')
+            self.__delay_save_orig = get_delay('save_orig')
+            self.__delay_get_mask = get_delay('get_mask')
+            self.__delay_save_mask = get_delay('save_mask')
+            self.__delay_get_analysis_pareidolia = get_delay(
+                'get_analysis_pareidolia')
+            self.__delay_save_analysis = get_delay('save_analysis')
+            self.__delay_save_pareidolia = get_delay('save_pareidolia')
+            self.__delay_get_classification = get_delay('get_classification')
+            self.__delay_save_classification = get_delay('save_classification')
 
         def check_orig_priority():
             if self.orig_priority < 0:
                 self.orig_priority += ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE
 
-                self.__delay_get_orig = self.orig_priority ** 2
-                self.__delay_review_orig = self.orig_priority ** 2
-                self.__delay_save_orig = self.orig_priority ** 2
-                self.__delay_save_mask = 0
-                self.__delay_get_analysis_pareidolia = 0
-                self.__delay_save_analysis = 0
-                self.__delay_save_pareidolia = 0
-                self.__delay_get_classification = 0
-                self.__delay_save_classification = 0
+                self.__delay_get_orig = -self.orig_priority
+                self.__delay_review_orig = -self.orig_priority
+                self.__delay_save_orig = -self.orig_priority
                 logger.debug('Adjusted delays')
 
         def check_invalid_orig_count():
@@ -417,8 +398,6 @@ class DeepCream:
                 logger.warning('There are a lot of invalid images, attempting '
                                'to adjust delays')
                 self.orig_priority = NIGHT_IMAGE_PRIORITY
-            if self.invalid_orig_rate == 0:
-                self.orig_priority = 0
 
         while self.alive:
             try:
@@ -426,6 +405,13 @@ class DeepCream:
                 adjust_delays()
                 check_orig_priority()
                 check_invalid_orig_count()
+
+                save_classification_time = self.__delay_save_classification + \
+                                           self.__duration_save_classification
+
+                logger.debug(
+                    f'Current save_classification time is '
+                    f'{save_classification_time} seconds per image')
 
             except (DataBase.DataBaseFullError, SystemExit,
                     KeyboardInterrupt) as e:
@@ -439,6 +425,8 @@ class DeepCream:
 
     @thread('get_orig')
     def __get_orig(self):
+        """This thread takes the images with the camera."""
+
         if self.camera is not None:
             orig = np.empty(
                 (self.capture_resolution[1], self.capture_resolution[0], 3),
@@ -453,13 +441,11 @@ class DeepCream:
 
         self.orig_review_queue.put(orig)
         logger.debug('Got orig')
-        logger.debug(
-            f'Current get_orig time is '
-            f'{self.__delay_get_orig + self.__duration_get_orig}'
-            f' seconds per image')
 
     @thread('review_orig')
     def __review_orig(self):
+        """This thread """
+
         if not self.orig_review_queue.empty():
             logger.debug('Reviewing orig image')
             orig = self.orig_review_queue.get()

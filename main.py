@@ -1,4 +1,5 @@
 import logging
+import threading as th
 import time
 import traceback
 
@@ -11,6 +12,7 @@ from DeepCream.constants import (DEFAULT_DELAY,
                                  directory,
                                  tpu_support,
                                  capture_resolution,
+                                 MAX_NUM_THREADS,
                                  )
 from DeepCream.database import DataBase
 from DeepCream.deepcream import DeepCream
@@ -86,7 +88,7 @@ while time.time() - start_time < runtime and not finished:
             # If the cpu the temperature is too high, then the program is
             # paused to ensure that no thermal breakdown occurs.
             if cpu.temperature > TEMPERATURE_THRESHOLD:
-                logger.critical(f'The temperature {cpu.temperature}°C is too '
+                logger.critical(f'The temperature {cpu.temperature}C is too '
                                 f'high')
                 if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
                     logger.warning(
@@ -94,13 +96,27 @@ while time.time() - start_time < runtime and not finished:
                     deepcream.alive = False
                     time.sleep(TEMPERATURE_SLEEP)
                     logger.info('Starting DeepCream execution again')
-                    logger.info('CPU temperature: {cpu.temperature}°C')
+                    logger.info('CPU temperature: {cpu.temperature}C')
                     deepcream.alive = True
             elif cpu.temperature > 80:
                 logger.warning(
-                    'CPU temperature {cpu.temperature}°C is very high')
+                    'CPU temperature {cpu.temperature}C is very high')
             else:
-                logger.debug(f'CPU temperature: {cpu.temperature}°C')
+                logger.debug(f'CPU temperature: {cpu.temperature}C')
+
+        num_threads = th.active_count()
+
+        if num_threads > MAX_NUM_THREADS:
+            logger.critical(
+                f'There are to many active threads: {num_threads}')
+
+            if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
+                logger.warning(f'Restarting DeepCream')
+                deepcream.alive = False
+        if num_threads > MAX_NUM_THREADS / 2:
+            logger.warning(f'There are a lot of threads: {num_threads}')
+        else:
+            logger.debug(f'Number of threads: {num_threads}')
 
     except DataBase.DataBaseFullError as err:
         # If the program runs out of memory (because the 3GB are reached) the

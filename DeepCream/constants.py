@@ -25,7 +25,7 @@ FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '
 
-CONSOLE_LOGGING_LEVEL = logging.WARNING
+CONSOLE_LOGGING_LEVEL = logging.DEBUG
 
 # The paths for the log files
 log_time = get_time()
@@ -76,32 +76,29 @@ DEFAULT_DELAY = 0.5
 
 # The maximum time a single execution of a function in a thread is allowed to
 # last, after which DeepCream is restarted
-MAX_TIME = 30
+MAX_TIME = 20
 
 # This is the number of invalid images after which the night mode takes place.
 INVALID_ORIG_COUNT_THRESHOLD = 10
 
 # The orig_priority at night
-NIGHT_IMAGE_PRIORITY = -2
+NIGHT_IMAGE_PRIORITY = -4
 
 # If the OrigPrioritisationError is raised, the orig_priority is reduced by
 # this amount.
 ORIG_PRIORITISATION_ERROR_PENALTY = 4
 
-# The time (in seconds) after which the orig_priority reaches 0 again after
-# an ORIG_PRIORITISATION_ERROR
-ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 25 \
-                                          * ORIG_PRIORITISATION_ERROR_PENALTY \
-                                          * DEFAULT_DELAY
+# The amount per second of which the orig_priority normalises again
+ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 0.5 * DEFAULT_DELAY
 
 # The temperature after which the program is paused
 TEMPERATURE_THRESHOLD = 95
 
-# The duration after a too high temperature the program is paused
+# The duration the program is paused after a too high temperature occurred
 TEMPERATURE_SLEEP = 60
 
 # Maximum time the program is allowed to run (in seconds)
-runtime = 200  # 10800
+runtime = 2000  # 10800
 
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time
@@ -120,3 +117,6 @@ runs_on_pi = False
 
 # The resolution of the camera connected to the astro pi
 capture_resolution = (2592, 1952)
+
+# The maximum number of threads after which DeepCream is restarted
+MAX_NUM_THREADS = 100
