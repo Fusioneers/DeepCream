@@ -21,7 +21,7 @@ FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
                       '%(funcName)s: line %(lineno)d: %(levelname)s: ' \
                       '%(message)s'
 
-# A more concise logging format for the consol or the INFO log
+# A more concise logging format for the console or the INFO log
 CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                          'message)s '
 
@@ -93,3 +93,9 @@ ORIG_PRIORITISATION_ERROR_PENALTY = 4
 ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 25 \
                                           * ORIG_PRIORITISATION_ERROR_PENALTY \
                                           * DEFAULT_DELAY
+
+# The temperature after which the program is paused
+TEMPERATURE_THRESHOLD = 95
+
+# The duration after a too high temperature the program is paused
+TEMPERATURE_SLEEP = 60

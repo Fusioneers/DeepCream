@@ -7,6 +7,7 @@ import threading as th
 import time as t
 import traceback
 from queue import Queue
+
 import cv2 as cv
 import numpy as np
 
@@ -113,8 +114,8 @@ class DeepCream:
             except Exception as e:
                 logger.error('Camera not configured: ', str(e))
                 raise ValueError('Camera not configured')
-        else:
-            self.camera = None
+            else:
+                self.camera = None
         self.capture_resolution = capture_resolution
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)

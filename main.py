@@ -4,7 +4,8 @@ import time
 import traceback
 
 import DeepCream
-from DeepCream.constants import ABS_PATH, DEFAULT_DELAY
+from DeepCream.constants import ABS_PATH, DEFAULT_DELAY, TEMPERATURE_THRESHOLD, \
+    TEMPERATURE_SLEEP
 from DeepCream.database import DataBase
 
 # Gets the current time as start time
@@ -14,13 +15,26 @@ logger = logging.getLogger('DeepCream.main')
 finished = False
 runtime = 200  # 10800  # Maximum time the program is allowed to run (in seconds)
 buffer = 120  # Time the program is going to run shorter than the runtime to ensure it finishes in time
+pi_camera = False
+
+cpu = None
+
+if pi_camera:
+    try:
+        from gpiozero import CPUTemperature
+
+        cpu = CPUTemperature()
+    except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+        logger.critical(e)
+    except Exception as e:
+        logger.error('CPU temperature not configured: ', str(e))
 
 
 def create_deepcream() -> DeepCream.deepcream.DeepCream:
     """Instantiates DeepCream"""
     new_deepcream = DeepCream.initialize(
         os.path.join(ABS_PATH, 'data', 'input'),
-        tpu_support=False, pi_camera=False,
+        tpu_support=False, pi_camera=pi_camera,
         capture_resolution=(2592, 1952))
     logger.info('Initialised DeepCream')
 
@@ -62,6 +76,28 @@ while time.time() - start_time < runtime and not finished:
 
             logger.info('DeepCream execution time: ' + str(
                 int(time.time() - start_time)) + 's')
+
+        if cpu is not None:
+
+            if cpu.temperature > 80:
+                logger.warning(
+                    'CPU temperature {cpu.temperature}°C is very high')
+
+            # If the cpu the temperature is too high, then the program is
+            # paused to ensure that no thermal breakdown occurs.
+            elif cpu.temperature > TEMPERATURE_THRESHOLD:
+                logger.critical(f'The temperature {cpu.temperature}°C is too '
+                                f'high')
+                if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
+                    logger.warning(f'pausing for {TEMPERATURE_SLEEP}s')
+                    deepcream.alive = False
+                    time.sleep(TEMPERATURE_SLEEP)
+                    logger.info('Starting DeepCream execution again')
+                    logger.info('CPU temperature: {cpu.temperature}°C')
+                deepcream.alive = True
+            else:
+                logger.debug(f'CPU temperature: {cpu.temperature}°C')
+
     except DataBase.DataBaseFullError as err:
         # If the program runs out of memory (because the 3GB are reached) the
         # while loop will stop before the three hours are over
