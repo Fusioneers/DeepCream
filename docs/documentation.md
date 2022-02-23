@@ -123,16 +123,15 @@ between these modules and the database.
 There are two small "issues" wich aren't really problems but which should be
 noted:
 
-1. The threads don't necessarily stop with the end of the main program, however
-   the runtime of the program accounts for this with a buffer which leads it to
-   stopping 2 minutes earlier this is guaranteed to be enough time for the
-   treads to stop since a single thread can only take up to 90s for execution
-   anyway.
+1. When the deepcream module is restarted, the camera connection is closed and
+   opened again. In case the get_orig thread hasn't finished yet, it raises a
+   single exception, that the camera connection is closed. This error is caught
+   and has no effect.
 2. In some very rare cases there might be an exception after the program which
    say something like "terminate called without an active exception". This, as
    extensive testing has shown, doesn't have any effects at all and can be
    ignored. We know that the threading is the origin of the "error" but we
-   aren't really sure what's causing it
+   aren't really sure what's causing it.
 
 So to summarize the program will handle all exceptions, log them and if
 necessary restart the program. We've tested this in great detail and are
