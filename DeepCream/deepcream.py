@@ -63,7 +63,8 @@ def thread(name: str) -> Callable:
             self.exit = False
 
         def __enter__(self):
-            th.Thread(target=self.callme).start()
+            self.th = th.Thread(target=self.callme, daemon=True)
+            self.th.start()
 
         def callme(self):
             t.sleep(self.time)
@@ -73,6 +74,7 @@ def thread(name: str) -> Callable:
 
         def __exit__(self, a, b, c):
             self.exit = True
+            self.th.join()
 
     def decorator(func):
         def wrapper(self, *args, **kwargs):
@@ -422,10 +424,12 @@ class DeepCream:
                 check_orig_priority()
                 check_invalid_orig_count()
 
+                print(th.active_count())
+
                 logger.debug(
-                    f'Current image taking frequency is '
-                    f'{1 / (self.__delay_get_orig + self.__duration_get_orig)}'
-                    f' images per second')
+                    f'Current get_orig time is '
+                    f'{self.__delay_get_orig + self.__duration_get_orig}'
+                    f' seconds per image')
             except (DataBase.DataBaseFullError, SystemExit,
                     KeyboardInterrupt) as e:
                 with self.lock:

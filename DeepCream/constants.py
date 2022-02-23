@@ -76,7 +76,7 @@ DEFAULT_DELAY = 0.5
 
 # The maximum time a single execution of a function in a thread is allowed to
 # last, after which DeepCream is restarted
-MAX_TIME = 60 * 3
+MAX_TIME = 30
 
 # This is the number of invalid images after which the night mode takes place.
 INVALID_ORIG_COUNT_THRESHOLD = 10
