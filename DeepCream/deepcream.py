@@ -68,6 +68,11 @@ def thread(name: str) -> Callable:
 
         def callme(self):
             dtime = t.time()
+            while t.time() - dtime < self.time / 2 and not self.exit:
+                t.sleep(0.01)
+            if not self.exit:
+                logger.warning(
+                    f'The function {name} took already {self.time / 2}s')
             while t.time() - dtime < self.time and not self.exit:
                 t.sleep(0.01)
             if not self.exit:
@@ -131,7 +136,7 @@ class DeepCream:
         The priority of taking images. A value of 0 means no specific trend.
         A high value urges the program to take more pictures, negative values
         slow that down. More specifically, if it is below 0, the delay of
-        get_orig is set to orig_priority ** 2. If it is below 0, the penalty
+        get_orig is set to -orig_priority. If it is below 0, the penalty
         decays over time.
 
         invalid_orig_rate:

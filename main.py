@@ -98,7 +98,7 @@ while time.time() - start_time < runtime and not finished:
                     logger.info('Starting DeepCream execution again')
                     logger.info('CPU temperature: {cpu.temperature}C')
                     deepcream.alive = True
-            elif cpu.temperature > 80:
+            elif cpu.temperature > 70:
                 logger.warning(
                     'CPU temperature {cpu.temperature}C is very high')
             else:
@@ -113,7 +113,7 @@ while time.time() - start_time < runtime and not finished:
             if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
                 logger.warning(f'Restarting DeepCream')
                 deepcream.alive = False
-        if num_threads > MAX_NUM_THREADS * 0.75:
+        if num_threads > MAX_NUM_THREADS * 0.5:
             logger.warning(f'There are a lot of threads: {num_threads}')
 
     except DataBase.DataBaseFullError as err:
