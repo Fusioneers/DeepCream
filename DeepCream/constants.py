@@ -2,8 +2,6 @@ import logging
 import os
 from datetime import datetime
 
-DEBUG_MODE = True
-
 # The path to the repository root i.e. .../DeepCream
 ABS_PATH = os.path.dirname(os.path.normpath(os.path.dirname(__file__)))
 
@@ -98,6 +96,9 @@ TEMPERATURE_THRESHOLD = 95
 # occurred
 TEMPERATURE_SLEEP = 60
 
+# The maximum number of threads after which DeepCream is restarted
+MAX_NUM_THREADS = 100
+
 # Maximum time the program is allowed to run (in seconds)
 runtime = 10800
 
@@ -118,6 +119,3 @@ runs_on_pi = False
 
 # The resolution of the camera connected to the astro pi
 capture_resolution = (2592, 1952)
-
-# The maximum number of threads after which DeepCream is restarted
-MAX_NUM_THREADS = 100

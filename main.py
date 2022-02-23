@@ -52,15 +52,16 @@ def create_deepcream() -> DeepCream:
 # Instances DeepCream for the first time
 deepcream = create_deepcream()
 
+# Calculates the allowed execution time (minus the buffer)
+allowed_execution_time = runtime - buffer
+
 # Keeps DeepCream alive as long as the three hours aren't over and the
 # DeepCream module hasn't finished
-while time.time() - start_time < runtime and not finished:
+while time.time() - start_time < allowed_execution_time and not finished:
     time.sleep(DEFAULT_DELAY)
 
     # Makes sure the DeepCream module keeps running for the whole time
     try:
-        # Calculates the remaining execution time (minus the buffer)
-        allowed_execution_time = runtime - time.time() + start_time - buffer
 
         # If any exception makes it up to this level, the whole class is
         # restarted
@@ -71,17 +72,9 @@ while time.time() - start_time < runtime and not finished:
             deepcream = create_deepcream()
 
             logger.info(
-                f'Calling DeepCream.run with {allowed_execution_time}s '
+                f'Calling DeepCream.run with '
+                f'{allowed_execution_time - time.time() + start_time}s '
                 f'of execution time')
-
-        if allowed_execution_time <= 0:
-            # The allowed execution time is over, so the while loop can be
-            # stopped
-            finished = True
-            deepcream.alive = False
-
-            logger.info('DeepCream execution time: ' + str(
-                int(time.time() - start_time)) + 's')
 
         if cpu is not None:
 
@@ -104,13 +97,14 @@ while time.time() - start_time < runtime and not finished:
             else:
                 logger.debug(f'CPU temperature: {cpu.temperature}C')
 
+        # In the unlikely event that too many threads run in parallel,
+        # DeepCream is restarted.
         num_threads = th.active_count()
-
         if num_threads > MAX_NUM_THREADS:
             logger.critical(
                 f'There are too many active threads: {num_threads}')
 
-            if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
+            if allowed_execution_time > 60:
                 logger.warning(f'Restarting DeepCream')
                 deepcream.alive = False
         if num_threads > MAX_NUM_THREADS * 0.5:
@@ -118,7 +112,7 @@ while time.time() - start_time < runtime and not finished:
 
     except DataBase.DataBaseFullError as err:
         # If the program runs out of memory (because the 3GB are reached) the
-        # while loop will stop before the three hours are over
+        # while loop will stop before the three hours are over.
         logger.critical(
             'Stopping execution because database ran out of memory')
         finished = True
@@ -135,10 +129,18 @@ while time.time() - start_time < runtime and not finished:
         if finished:
             deepcream.alive = False
 
+# If DeepCream is still running, it is stopped and given enough time to close
+# all open resources.
+if deepcream.alive:
+    deepcream.alive = False
+    time.sleep(10)
+
+logger.info('DeepCream execution time: ' + str(
+    int(time.time() - start_time)) + 's')
+
 # Gets the current time as end time
 end_time = time.time()
 
 # Prints out and logs the overall execution time of the program
 # Note: For the handling of the threads see documentation.md
 logger.info(f'Overall execution time: {int(end_time - start_time)}s')
-print(f'Overall execution time: {int(end_time - start_time)}s')

@@ -16,10 +16,8 @@ import numpy as np
 from DeepCream.classification.classification import Classification
 from DeepCream.cloud_analysis.analysis import Analysis
 from DeepCream.cloud_detection.cloud_detection import CloudDetection
-from DeepCream.constants import (DEBUG_MODE,
-                                 ABS_PATH,
+from DeepCream.constants import (ABS_PATH,
                                  QUEUE_MAX_SIZE,
-                                 get_time,
                                  DEFAULT_DELAY,
                                  MAX_TIME,
                                  INVALID_ORIG_COUNT_THRESHOLD,
@@ -223,12 +221,8 @@ class DeepCream:
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
-        if DEBUG_MODE:
-            self.database = DataBase(
-                os.path.join(ABS_PATH, 'data', f'database_{get_time()}'))
-        else:
-            self.database = DataBase(
-                os.path.join(ABS_PATH, 'data', 'database'))
+        self.database = DataBase(
+            os.path.join(ABS_PATH, 'data', 'database'))
 
         self.alive = True
 
