@@ -67,14 +67,15 @@ def thread(name: str) -> Callable:
             self.th.start()
 
         def callme(self):
-            t.sleep(self.time)
+            dtime = t.time()
+            while t.time() - dtime < self.time and not self.exit:
+                t.sleep(DEFAULT_DELAY)
             if not self.exit:
                 logger.error(f'The function {name} took too long')
                 self.deepcream.alive = False
 
         def __exit__(self, a, b, c):
             self.exit = True
-            self.th.join()
 
     def decorator(func):
         def wrapper(self, *args, **kwargs):
@@ -287,29 +288,29 @@ class DeepCream:
 
         logger.debug('Initialised threads')
 
-        self.__delay_get_orig = 0
-        self.__delay_review_orig = 0
-        self.__delay_get_mask = 0
-        self.__delay_get_analysis_pareidolia = 0
-        self.__delay_get_classification = 0
+        self.__delay_get_orig = 1
+        self.__delay_review_orig = 1
+        self.__delay_get_mask = 1
+        self.__delay_get_analysis_pareidolia = 1
+        self.__delay_get_classification = 1
 
-        self.__delay_save_orig = 0
-        self.__delay_save_mask = 0
-        self.__delay_save_analysis = 0
-        self.__delay_save_classification = 0
-        self.__delay_save_pareidolia = 0
+        self.__delay_save_orig = 1
+        self.__delay_save_mask = 1
+        self.__delay_save_analysis = 1
+        self.__delay_save_classification = 1
+        self.__delay_save_pareidolia = 1
 
-        self.__duration_get_orig = 0
-        self.__duration_review_orig = 0
-        self.__duration_get_mask = 0
-        self.__duration_get_analysis_pareidolia = 0
-        self.__duration_get_classification = 0
+        self.__duration_get_orig = 1
+        self.__duration_review_orig = 1
+        self.__duration_get_mask = 1
+        self.__duration_get_analysis_pareidolia = 1
+        self.__duration_get_classification = 1
 
-        self.__duration_save_orig = 0
-        self.__duration_save_mask = 0
-        self.__duration_save_analysis = 0
-        self.__duration_save_classification = 0
-        self.__duration_save_pareidolia = 0
+        self.__duration_save_orig = 1
+        self.__duration_save_mask = 1
+        self.__duration_save_analysis = 1
+        self.__duration_save_classification = 1
+        self.__duration_save_pareidolia = 1
 
         logger.info('Initialisation of DeepCream finished')
 
@@ -319,6 +320,8 @@ class DeepCream:
         logger.debug('Attempting to start running')
 
         self.__th_delay_supervisor.start()
+
+        t.sleep(DEFAULT_DELAY)
 
         self.__th_get_orig.start()
         self.__th_review_orig.start()
@@ -424,12 +427,6 @@ class DeepCream:
                 check_orig_priority()
                 check_invalid_orig_count()
 
-                print(th.active_count())
-
-                logger.debug(
-                    f'Current get_orig time is '
-                    f'{self.__delay_get_orig + self.__duration_get_orig}'
-                    f' seconds per image')
             except (DataBase.DataBaseFullError, SystemExit,
                     KeyboardInterrupt) as e:
                 with self.lock:
@@ -456,6 +453,10 @@ class DeepCream:
 
         self.orig_review_queue.put(orig)
         logger.debug('Got orig')
+        logger.debug(
+            f'Current get_orig time is '
+            f'{self.__delay_get_orig + self.__duration_get_orig}'
+            f' seconds per image')
 
     @thread('review_orig')
     def __review_orig(self):
