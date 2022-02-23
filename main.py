@@ -139,5 +139,6 @@ while time.time() - start_time < runtime and not finished:
 end_time = time.time()
 
 # Prints out and logs the overall execution time of the program
+# Note: For the handling of the threads see documentation.md
 logger.info(f'Overall execution time: {int(end_time - start_time)}s')
 print(f'Overall execution time: {int(end_time - start_time)}s')

@@ -33,25 +33,25 @@ Source: https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/
 
 ## Scientific application
 
-The scientific approach is split into two distinct parts: The analysis, which
-separates clouds on the provided image and computes a variety of properties for
-each one. The classification part takes these features and generates
-probabilities for each cloud type.
+The scientific application is split into two distinct parts: The analysis, which
+separates the clouds on the provided image and computes a variety of properties for
+each one. The classification on the other hand part takes these features and computes how probable
+the different cloud types are for each of them.
 
 ### Cloud analysis
 
 The first part of the analysis consists of the separation of the clouds. These
 are mostly considered independent. The second part of the analysis identifies a
-couple of features that can indicate the type of the cloud. These features
-consist of shape based features, for example the elongation or the convexity,
+couple of features that can indicate the type of the cloud.
+These features consist of shape based features, for example the elongation or the convexity,
 and texture based features, like transparency and sharp edges.
 
 ### Classification
 
 At first, we thought about implementing a clustering algorithm to identify the
-different clouds. This would have had the disadvantages of consuming a lot of
+different clouds. However, this would have had the disadvantages of consuming a lot of
 computation time and resulting in barely predictable results. So instead we
-compute the classification by comparing the properties gathered by the analysis
+computed the classification by comparing the properties gathered by the analysis
 against a couple of cloud types previously defined. This allows us to quickly
 customise and specify new cloud types and correct classification mistakes made
 by the program, while maintaining a high performance.
@@ -78,7 +78,7 @@ Because we wanted to be able to restart the program multiple times, a proper
 database was needed. At first, we wanted to implement a relational database
 because of the ease of sqlite3 in python, but then we quickly realized that a
 document based database would yield far better results. As systems like MongoDB
-are not installed on the astropi, we implemented a database ourselves. More
+are not installed on the ASTRO PI, we implemented a database ourselves. More
 concretely it is a wrapper around a folder structure described more detailed in
 the docstrings of the module. It handles all in- and output to the file system,
 allowing a concise interface in the other modules.
@@ -107,11 +107,27 @@ i.e. an error is raised which urges the program to slow the taking of images
 down until more qualities are computed. In the unlikely scenario, that the
 csv files and masks use more space than 3GB, the program is stopped.
 
-## DeepCream
+## main.py and deepcream.py
 
-## Main
+The main.py and the deepcream.py control the other modules and ensure a smooth execution.
+To be able to do so they monitor and limit the execution time as well as the CPU temperature
+and number of active threads. They make sure that both stay under a certain threshold. If the CPU temperature for 
+example get to hot, the program will make a 60s pause to cool it off. If the number of active threads
+ever got too big the program would stop them, restart and continue where it left off. This is only
+possible thanks to the elegant interplay between these modules and the database.
 
-The main.py is comparatively simple as it just needs to instance the DeepCream
-module and start it. It does this in a while loop so that the program is
-guaranteed to run the full three hours. In the case of an error it catches any
-exceptions and logs them. After that it reinitialized the DeepCream model.
+There are two small "issues" with aren't really problems but which should be noted:
+1. The threads don't necessarily stop with the end of the main program, however the runtime of
+the program accounts for this with a buffer which leads it to stopping 2 minutes earlier this is
+guaranteed to be enough time for the treads to stop since a single thread can only take up to 90s for
+execution anyway.
+2. In some very rare cases there might be an exception after the program which say something
+like "terminate called without an active exception". This, as extensive testing has shown, doesn't
+have any effects at all and can be ignored. We know that the threading is the origin of the "error" but we
+aren't really sure what's causing it
+
+So to summarize the program will handle all exceptions, log them and if necessary restart the program. We've
+tested this in great detail and are confident the program will be able to fulfill its purpose with ease.
+
+If you do have questions or remarks please don't hesitate to contact us, we will be happy to help:
+[info@fusioneers.com](mailto:info@fusioneers.com)
