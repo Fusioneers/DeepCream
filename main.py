@@ -79,22 +79,22 @@ while time.time() - start_time < runtime and not finished:
 
         if cpu is not None:
 
-            if cpu.temperature > 80:
-                logger.warning(
-                    'CPU temperature {cpu.temperature}°C is very high')
-
             # If the cpu the temperature is too high, then the program is
             # paused to ensure that no thermal breakdown occurs.
-            elif cpu.temperature > TEMPERATURE_THRESHOLD:
+            if cpu.temperature > TEMPERATURE_THRESHOLD:
                 logger.critical(f'The temperature {cpu.temperature}°C is too '
                                 f'high')
                 if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
-                    logger.warning(f'pausing for {TEMPERATURE_SLEEP}s')
+                    logger.warning(
+                        f'Pausing DeepCream for {TEMPERATURE_SLEEP}s')
                     deepcream.alive = False
                     time.sleep(TEMPERATURE_SLEEP)
                     logger.info('Starting DeepCream execution again')
                     logger.info('CPU temperature: {cpu.temperature}°C')
-                deepcream.alive = True
+                    deepcream.alive = True
+            elif cpu.temperature > 80:
+                logger.warning(
+                    'CPU temperature {cpu.temperature}°C is very high')
             else:
                 logger.debug(f'CPU temperature: {cpu.temperature}°C')
 
