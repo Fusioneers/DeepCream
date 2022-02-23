@@ -1,3 +1,5 @@
+""""""
+
 import logging
 import os
 import random
@@ -85,7 +87,7 @@ class DeepCream:
 
         if DEBUG_MODE:
             self.database = DataBase(
-                os.path.join(ABS_PATH, 'data', f'database {get_time()}'))
+                os.path.join(ABS_PATH, 'data', f'database_{get_time()}'))
         else:
             self.database = DataBase(
                 os.path.join(ABS_PATH, 'data', 'database'))

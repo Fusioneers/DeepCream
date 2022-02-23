@@ -8,7 +8,7 @@ DEBUG_MODE = True
 ABS_PATH = os.path.dirname(os.path.normpath(os.path.dirname(__file__)))
 
 # The time format used by log files
-TIME_FORMAT = '%Y-%m-%d %H-%M-%S'
+TIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 
 
 # A shorthand for the current time represented as a string
@@ -30,8 +30,8 @@ CONSOLE_LOGGING_LEVEL = logging.WARNING
 # The paths for the log files
 log_time = get_time()
 LOG_DIR = os.path.normpath(os.path.join(ABS_PATH, 'logs'))
-DEBUG_LOG_PATH = os.path.join(LOG_DIR, f'DEBUG {log_time}.log')
-INFO_LOG_PATH = os.path.join(LOG_DIR, f'INFO {log_time}.log')
+DEBUG_LOG_PATH = os.path.join(LOG_DIR, f'DEBUG_{log_time}.log')
+INFO_LOG_PATH = os.path.join(LOG_DIR, f'INFO_{log_time}.log')
 
 # These are default values used by the Analysis class
 DEFAULT_APPR_DIST = 3
