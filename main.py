@@ -6,8 +6,6 @@ import traceback
 from DeepCream.__init__ import create_deepcream
 from DeepCream.constants import (ABS_PATH,
                                  DEFAULT_DELAY,
-                                 TEMPERATURE_THRESHOLD,
-                                 TEMPERATURE_SLEEP,
                                  runs_on_pi,
                                  tpu_support,
                                  runtime,
@@ -23,8 +21,8 @@ finished = False
 
 # Instances DeepCream for the first time
 deepcream = create_deepcream(os.path.join(ABS_PATH, 'data', 'input'),
-                             tpu_support=False,
-                             pi_camera=pi_camera,
+                             tpu_support=tpu_support,
+                             pi_camera=runs_on_pi,
                              capture_resolution=(2592, 1952))
 
 # Keeps DeepCream alive as long as the three hours aren't over and the
@@ -45,8 +43,8 @@ while time.time() - start_time < runtime and not finished:
                 'attempting to reinstantiate DeepCream')
             deepcream = create_deepcream(
                 os.path.join(ABS_PATH, 'data', 'input'),
-                tpu_support=False,
-                pi_camera=pi_camera,
+                tpu_support=tpu_support,
+                pi_camera=runs_on_pi,
                 capture_resolution=(2592, 1952))
 
             logger.info(
