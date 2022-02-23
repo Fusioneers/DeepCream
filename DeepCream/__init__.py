@@ -37,8 +37,18 @@ logger.addHandler(console_handler)
 logger.info('Initialised logger')
 
 
-# This function just makes it more convenient to initialize the DeepCream module
-def initialize(directory, tpu_support: bool = False,
-               pi_camera: bool = False, capture_resolution=(2592, 1952)):
-    return DeepCreamClass(directory, tpu_support, pi_camera,
-                          capture_resolution)
+# This function just makes it more convenient to initialize the DeepCream class
+def create_deepcream(directory,
+                     tpu_support: bool = False,
+                     pi_camera: bool = False,
+                     capture_resolution=(2592, 1952)) -> DeepCreamClass:
+    """Creates and starts a new DeepCream instance"""
+    new_deepcream = DeepCreamClass(directory, tpu_support, pi_camera,
+                                   capture_resolution)
+
+    logger.info('Initialised DeepCream')
+
+    new_deepcream.run()
+    logger.info('Started DeepCream')
+
+    return new_deepcream

@@ -3,7 +3,7 @@ import os.path
 import time
 import traceback
 
-import DeepCream
+from DeepCream.__init__ import create_deepcream
 from DeepCream.constants import (ABS_PATH,
                                  DEFAULT_DELAY,
                                  TEMPERATURE_THRESHOLD,
@@ -32,23 +32,11 @@ if pi_camera:
     except Exception as e:
         logger.error('CPU temperature not configured: ', str(e))
 
-
-def create_deepcream() -> DeepCream.deepcream.DeepCream:
-    """Instantiates DeepCream"""
-    new_deepcream = DeepCream.initialize(
-        os.path.join(ABS_PATH, 'data', 'input'),
-        tpu_support=False, pi_camera=pi_camera,
-        capture_resolution=(2592, 1952))
-    logger.info('Initialised DeepCream')
-
-    new_deepcream.run()
-    logger.info('Started DeepCream')
-
-    return new_deepcream
-
-
 # Instances DeepCream for the first time
-deepcream = create_deepcream()
+deepcream = create_deepcream(os.path.join(ABS_PATH, 'data', 'input'),
+                             tpu_support=False,
+                             pi_camera=pi_camera,
+                             capture_resolution=(2592, 1952))
 
 # Keeps DeepCream alive as long as the three hours aren't over and the
 # DeepCream module hasn't finished
@@ -66,7 +54,12 @@ while time.time() - start_time < runtime and not finished:
             logger.warning(
                 'DeepCream is not alive although the time is not up, '
                 'attempting to reinstantiate DeepCream')
-            deepcream = create_deepcream()
+            deepcream = create_deepcream(
+                os.path.join(ABS_PATH, 'data', 'input'),
+                tpu_support=False,
+                pi_camera=pi_camera,
+                capture_resolution=(2592, 1952))
+
             logger.info(
                 f'Calling DeepCream.run with {allowed_execution_time}s '
                 f'of execution time')
@@ -109,7 +102,7 @@ while time.time() - start_time < runtime and not finished:
         finished = True
         logger.info(
             f'DeepCream execution time: {int(time.time() - start_time)}s')
-    except KeyboardInterrupt as e:
+    except (KeyboardInterrupt, SystemExit) as e:
         logger.critical(traceback.format_exc())
         raise e from e
     except BaseException as e:
