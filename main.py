@@ -5,7 +5,7 @@ import traceback
 from DeepCream.constants import (DEFAULT_DELAY,
                                  TEMPERATURE_THRESHOLD,
                                  TEMPERATURE_SLEEP,
-                                 pi_camera,
+                                 runs_on_pi,
                                  runtime,
                                  buffer,
                                  directory,
@@ -36,7 +36,7 @@ if pi_camera:
 
 def create_deepcream() -> DeepCream:
     """Creates and starts a new DeepCream instance"""
-    new_deepcream = DeepCream(directory, tpu_support, pi_camera,
+    new_deepcream = DeepCream(directory, tpu_support, runs_on_pi,
                               capture_resolution)
 
     logger.info('Initialised DeepCream')
