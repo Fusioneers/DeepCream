@@ -283,25 +283,19 @@ class DataBase:
     def delete_orig(self, identifier: str):
         """Deletes the orig of the provided identifier"""
         logger.debug(f'Attempting to delete orig {identifier}')
-        try:
+        if os.path.exists(self.__get_path(identifier, 'orig.jpg')):
             os.remove(self.__get_path(identifier, 'orig.jpg'))
-            self.metadata['data'][identifier]['deleted'] = get_time()
-            self.metadata['metadata']['num deleted images'] += 1
             self.metadata['metadata']['num compressed images'] -= 1
-            self.__update_metadata()
-            logger.debug(f'Deleted orig {identifier}')
-        except FileNotFoundError:
+        elif os.path.exists(self.__get_path(identifier, 'orig.png')):
             # If orig.jpg does not exist then orig.png is deleted
-            logger.error(traceback.format_exc())
-            if os.path.exists(self.__get_path(identifier, 'orig.png')):
-                os.remove(self.__get_path(identifier, 'orig.png'))
-                self.metadata['data'][identifier]['deleted'] = get_time()
-                self.metadata['metadata']['num deleted images'] += 1
-                self.__update_metadata()
-                logger.debug(f'Deleted orig {identifier}')
-            else:
-                raise ValueError(f'Tried to delete image {identifier} which '
-                                 f'was already deleted')
+            os.remove(self.__get_path(identifier, 'orig.png'))
+        else:
+            raise ValueError(f'Tried to delete image {identifier} which '
+                             f'does not exist.')
+        self.metadata['data'][identifier]['deleted'] = get_time()
+        self.metadata['metadata']['num deleted images'] += 1
+        self.__update_metadata()
+        logger.debug(f'Deleted orig {identifier}')
 
     def __free_space(self):
         """Frees up an identifier. See the documentation for the algorithm."""
