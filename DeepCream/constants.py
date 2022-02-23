@@ -23,7 +23,7 @@ EXTENDED_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
 SHORT_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
                        'message)s '
 
-CONSOLE_LOGGING_LEVEL = logging.DEBUG
+CONSOLE_LOGGING_LEVEL = logging.WARNING
 
 # The paths for the log files
 log_time = get_time()
@@ -41,7 +41,7 @@ DEFAULT_VAL_THRESHOLD = 30
 QUALITY_THRESHOLD = 0.15
 
 # The maximum size for the database
-MAX_DATABASE_SIZE = 2900 * (10 ** 6)
+MAX_DATABASE_SIZE = 2800 * (10 ** 6)
 
 # This is a list of features of a cloud returned by Analysis.evaluate
 analysis_features = ['center x',
@@ -100,7 +100,7 @@ TEMPERATURE_SLEEP = 60
 MAX_NUM_THREADS = 100
 
 # Maximum time the program is allowed to run (in seconds)
-runtime = 150  # 10800
+runtime = 10800
 
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time
@@ -111,11 +111,11 @@ directory = os.path.join(ABS_PATH, 'data', 'input')
 
 # If this variable is true the program expects to have access to the
 # coral TPU accelerator
-tpu_support = False
+tpu_support = True
 
 # If this variable is set to true the program expects to be running on a
 # Raspberry Pi with a connected Pi Camera
-runs_on_pi = False
+runs_on_pi = True
 
 # The resolution of the camera connected to the astro pi
 capture_resolution = (2592, 1952)
