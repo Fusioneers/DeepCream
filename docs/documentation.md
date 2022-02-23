@@ -105,7 +105,7 @@ image with the lowest quality is deleted, otherwise deleted. If there are no
 not deleted images with a quality, but there are images without, then a signal
 i.e. an error is raised which urges the program to slow the taking of images
 down until more qualities are computed. In the unlikely scenario, that the
-csv's and masks use more space than 3GB, the program is stopped.
+csv files and masks use more space than 3GB, the program is stopped.
 
 ## DeepCream
 

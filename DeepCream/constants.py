@@ -106,4 +106,7 @@ runtime = 200  # 10800
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time
 buffer = 120
-pi_camera = False
+# If this variable is true the program expects to have access to the coral TPU accelerator
+tpu_support = False
+# If this variable is set to true the program expects to be running on a Raspberry Pi with a connected Pi Camera
+runs_on_pi = False
