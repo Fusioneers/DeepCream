@@ -54,7 +54,7 @@ class DataBase:
                 ...
             ...
 
-    An identifier refers to a subfolder of data.  It contains all data for a
+    An identifier refers to a subfolder of data. It contains all data for a
     single taken image called orig. If orig is neither compressed nor deleted,
     it is saved as a png otherwise a jpg or not. The mask is always saved as a
     png because of the relative simple black and white image and the low size
@@ -157,14 +157,15 @@ class DataBase:
 
     def __update_metadata(self):
         """Updates the metadata file according to the metadata dictionary."""
-        self.metadata['metadata']['size'] = self.__get_size()
 
+        self.metadata['metadata']['size'] = self.__get_size()
         with open(os.path.join(self.base_dir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(self.metadata, indent=4))
 
     def __get_param(self, identifier: str, param: str) -> Union[
         float, str, bool]:
         """Gets the value of the parameter of an identifier."""
+
         return self.metadata['data'][str(identifier)][param]
 
     def __get_path(self, identifier: str, name: str) -> str:
@@ -266,11 +267,12 @@ class DataBase:
         logger.debug(f'Attempting to compress image {identifier}')
         if self.metadata['data'][identifier]['quality']:
 
-            # First the png is deleted and then as a jpg saved
+            # First the png is deleted and then saved as a jpg
             orig = self.__load_img(identifier, 'orig.png')
             os.remove(self.__get_path(identifier, 'orig.png'))
             self.__save_img(identifier, 'orig.jpg', orig)
 
+            # This updates the metadata file
             self.metadata['data'][identifier]['compressed'] = get_time()
             self.metadata['metadata']['num compressed images'] += 1
             self.__update_metadata()
@@ -281,16 +283,21 @@ class DataBase:
 
     def delete_orig(self, identifier: str):
         """Deletes the orig of the provided identifier"""
+
         logger.debug(f'Attempting to delete orig {identifier}')
         if os.path.exists(self.__get_path(identifier, 'orig.jpg')):
+            # Deletes the jpg
             os.remove(self.__get_path(identifier, 'orig.jpg'))
             self.metadata['metadata']['num compressed images'] -= 1
+
         elif os.path.exists(self.__get_path(identifier, 'orig.png')):
-            # If orig.jpg does not exist then orig.png is deleted
+            # If orig.jpg does not exist then orig.png is deleted.
             os.remove(self.__get_path(identifier, 'orig.png'))
+
         else:
             raise ValueError(f'Tried to delete image {identifier} which '
                              f'does not exist.')
+
         self.metadata['data'][identifier]['deleted'] = get_time()
         self.metadata['metadata']['num deleted images'] += 1
         self.__update_metadata()
@@ -311,14 +318,17 @@ class DataBase:
                           if not value['deleted']]
             # In case this list is empty, it is checked, whether there are any
             # images, which are not deleted.
+
             if no_quality:
                 # If it is true, then a signal is sent to deepcream to
                 # prioritise the analysing of the images.
+
                 raise DataBase.OrigPrioritisationError('There are too many '
                                                        'origs without quality')
             else:
                 # If the masks and csv's take up so much space, then the
                 # program is stopped.
+
                 raise DataBase.DataBaseFullError(
                     'There are no not yet deleted images '
                     'available')
@@ -362,14 +372,19 @@ class DataBase:
     def __check_space(self, orig: np.ndarray):
         """Checks if space needs to be freed."""
 
+        # Gets the space the image would use if it is saved
         is_success, orig_png = cv.imencode('.png', orig)
         if not is_success:
             logger.error('Failed converting ndarray to png')
         orig_png_size = sys.getsizeof(orig_png)
         logger.debug(f'orig size: {orig_png_size}')
 
+        # Checks if the database and the saved orig would use too much space
         if self.metadata['metadata']['size'] \
                 + orig_png_size >= MAX_DATABASE_SIZE:
+
+            # This clause is just for log formatting reasons. The first time
+            # space needs to be freed, the log is a warning instead of a debug.
             if self.metadata['metadata']['num compressed images'] \
                     or self.metadata['metadata']['num deleted images']:
                 logger.debug('Attempting to free up space')
@@ -387,6 +402,7 @@ class DataBase:
         """Creates a new identifier, checks if space needs to be freed, saves
         the provided orig in it and returns the identifier."""
 
+        # Gets the next not used identifier
         identifier = 1
         while str(identifier) in self.metadata['data']:
             identifier += 1
@@ -400,6 +416,7 @@ class DataBase:
 
         self.__check_space(orig)
 
+        # Adds a new entry to the metadata
         os.mkdir(os.path.join(self.data_dir, identifier))
         self.metadata['data'][identifier] = {
             'orig creation time': get_time(),
@@ -526,7 +543,6 @@ class DataBase:
 
         logger.debug(f'Attempting to load mask from {identifier}')
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not available in database')
             raise ValueError(
                 f'Identifier {identifier} not available in database')
 
@@ -558,7 +574,6 @@ class DataBase:
 
         logger.debug(f'Attempting to load classification from {identifier}')
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created classification']:
@@ -575,7 +590,6 @@ class DataBase:
 
         logger.debug(f'Attempting to load pareidolia from {identifier}')
         if identifier not in self.metadata['data']:
-            logger.error('Identifier not available in database')
             raise ValueError('Identifier not available in database')
 
         if not self.metadata['data'][identifier]['created pareidolia']:
