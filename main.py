@@ -23,7 +23,7 @@ finished = False
 
 cpu = None
 
-if pi_camera:
+if runs_on_pi:
     try:
         from gpiozero import CPUTemperature
 

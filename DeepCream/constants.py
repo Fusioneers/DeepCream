@@ -107,16 +107,15 @@ runtime = 200  # 10800
 # finishes in time
 buffer = 120
 
-# Whether a camera is connected to the astro pi
-pi_camera = False
-
 # The directory where the database is saved
 directory = os.path.join(ABS_PATH, 'data', 'input')
 
-# If this variable is true the program expects to have access to the coral TPU accelerator
+# If this variable is true the program expects to have access to the
+# coral TPU accelerator
 tpu_support = False
 
-# If this variable is set to true the program expects to be running on a Raspberry Pi with a connected Pi Camera
+# If this variable is set to true the program expects to be running on a
+# Raspberry Pi with a connected Pi Camera
 runs_on_pi = False
 
 # The resolution of the camera connected to the astro pi
