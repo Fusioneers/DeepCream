@@ -14,9 +14,8 @@ class CloudDetection:
     def __init__(self, binary_cloud_threshold: float = 0.85,
                  tpu_support: bool = False):
 
-        """
-
-        This class is responsible for filtering out the clouds of any given image.
+        """This class is responsible for filtering out the clouds of any given
+        image.
 
         Args:
             binary_cloud_threshold:
@@ -26,8 +25,8 @@ class CloudDetection:
 
             tpu_support:
             Whether the system supports a tpu. If true the cloud detection
-            will use the edgetpu library from pycoral.utils, otherwise it will use
-            keras to load the model. (False by default)
+            will use the edgetpu library from pycoral.utils, otherwise it will
+            use keras to load the model. (False by default)
 
         """
 
@@ -57,10 +56,8 @@ class CloudDetection:
 
     def __load_image(self, image: np.ndarray) -> np.ndarray:
 
-        """
-
-        This function is responsible for preparing the image to
-        be used as input for the AI.
+        """This function is responsible for preparing the image to be used as
+        input for the AI.
 
         Args:
             image:
@@ -68,15 +65,16 @@ class CloudDetection:
 
         Returns:
             scaled:
-            The image in RGB format as numpy array resized to self.WIDTH and self.HEIGHT
-            and scaled to have pixel values between 0 and 1.
+            The image in RGB format as numpy array resized to self.WIDTH and
+            self.HEIGHT and scaled to have pixel values between 0 and 1.
 
         """
 
         # Converts the image to a PIL image
         scaled = Image.fromarray(image)
         # Resizes the image
-        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT), Image.ANTIALIAS)
+        scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT),
+                              Image.ANTIALIAS)
         # Converts it back to an array
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
@@ -87,9 +85,7 @@ class CloudDetection:
 
     def __ai_generate_image_mask(self, image: np.ndarray) -> np.ndarray:
 
-        """
-
-        This function generates an image mask based on the input image.
+        """This function generates an image mask based on the input image.
 
         Args:
             image:
@@ -97,9 +93,10 @@ class CloudDetection:
             self.WIDTH, self.HEIGHT.
 
         Returns:
-            The cloud mask (calculated by the AI) as black and white image in the dimensions
-            self.WIDTH, self.HEIGHT, with 1 representing a 100% chance for a pixels to be part
-            of a cloud and 0 representing a 0% chance.
+            The cloud mask (calculated by the AI) as black and white image in
+            the dimensions self.WIDTH, self.HEIGHT, with 1 representing a 100%
+            chance for a pixels to be part of a cloud and 0 representing a 0%
+            chance.
 
         """
 
@@ -110,15 +107,14 @@ class CloudDetection:
             self.interpreter.set_tensor(
                 self.input_details[0]['index'], np.asarray([image]))
             self.interpreter.invoke()
-            return self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+            return \
+                self.interpreter.get_tensor(self.output_details[0]['index'])[0]
         else:
             raise ValueError('No AI was configured')
 
     def evaluate_image(self, image: np.ndarray) -> np.ndarray:
 
-        """
-
-        This is the only public function of the class and its job is to
+        """This is the only public function of the class and its job is to
         call the functions above to then return the mask.
 
         Args:
