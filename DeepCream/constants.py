@@ -106,4 +106,15 @@ runtime = 200  # 10800
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time
 buffer = 120
+
+# Whether a camera is connected to the astro pi
 pi_camera = False
+
+# The directory where the database is saved
+directory = os.path.join(ABS_PATH, 'data', 'input')
+
+# Whether a tpu is connected to the astro pi
+tpu_support = False
+
+# The resolution of the camera connected to the astro pi
+capture_resolution = (2592, 1952)

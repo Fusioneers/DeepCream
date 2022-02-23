@@ -1,16 +1,19 @@
 import logging
-import os.path
 import time
 import traceback
 
-from DeepCream.__init__ import create_deepcream
-from DeepCream.constants import (ABS_PATH,
-                                 DEFAULT_DELAY,
+from DeepCream.constants import (DEFAULT_DELAY,
+                                 TEMPERATURE_THRESHOLD,
+                                 TEMPERATURE_SLEEP,
                                  pi_camera,
                                  runtime,
                                  buffer,
+                                 directory,
+                                 tpu_support,
+                                 capture_resolution,
                                  )
 from DeepCream.database import DataBase
+from DeepCream.deepcream import DeepCream
 
 # Gets the current time as start time
 start_time = time.time()
@@ -18,11 +21,34 @@ start_time = time.time()
 logger = logging.getLogger('DeepCream.main')
 finished = False
 
+cpu = None
+
+if pi_camera:
+    try:
+        from gpiozero import CPUTemperature
+
+        cpu = CPUTemperature()
+    except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+        logger.critical(e)
+    except Exception as e:
+        logger.error('CPU temperature not configured: ', str(e))
+
+
+def create_deepcream() -> DeepCream:
+    """Creates and starts a new DeepCream instance"""
+    new_deepcream = DeepCream(directory, tpu_support, pi_camera,
+                              capture_resolution)
+
+    logger.info('Initialised DeepCream')
+
+    new_deepcream.run()
+    logger.info('Started DeepCream')
+
+    return new_deepcream
+
+
 # Instances DeepCream for the first time
-deepcream = create_deepcream(os.path.join(ABS_PATH, 'data', 'input'),
-                             tpu_support=False,
-                             pi_camera=pi_camera,
-                             capture_resolution=(2592, 1952))
+deepcream = create_deepcream()
 
 # Keeps DeepCream alive as long as the three hours aren't over and the
 # DeepCream module hasn't finished
@@ -40,11 +66,7 @@ while time.time() - start_time < runtime and not finished:
             logger.warning(
                 'DeepCream is not alive although the time is not up, '
                 'attempting to reinstantiate DeepCream')
-            deepcream = create_deepcream(
-                os.path.join(ABS_PATH, 'data', 'input'),
-                tpu_support=False,
-                pi_camera=pi_camera,
-                capture_resolution=(2592, 1952))
+            deepcream = create_deepcream()
 
             logger.info(
                 f'Calling DeepCream.run with {allowed_execution_time}s '
@@ -58,6 +80,27 @@ while time.time() - start_time < runtime and not finished:
 
             logger.info('DeepCream execution time: ' + str(
                 int(time.time() - start_time)) + 's')
+
+        if cpu is not None:
+
+            # If the cpu the temperature is too high, then the program is
+            # paused to ensure that no thermal breakdown occurs.
+            if cpu.temperature > TEMPERATURE_THRESHOLD:
+                logger.critical(f'The temperature {cpu.temperature}°C is too '
+                                f'high')
+                if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
+                    logger.warning(
+                        f'Pausing DeepCream for {TEMPERATURE_SLEEP}s')
+                    deepcream.alive = False
+                    time.sleep(TEMPERATURE_SLEEP)
+                    logger.info('Starting DeepCream execution again')
+                    logger.info('CPU temperature: {cpu.temperature}°C')
+                    deepcream.alive = True
+            elif cpu.temperature > 80:
+                logger.warning(
+                    'CPU temperature {cpu.temperature}°C is very high')
+            else:
+                logger.debug(f'CPU temperature: {cpu.temperature}°C')
 
     except DataBase.DataBaseFullError as err:
         # If the program runs out of memory (because the 3GB are reached) the
