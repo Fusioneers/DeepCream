@@ -100,7 +100,7 @@ TEMPERATURE_SLEEP = 60
 MAX_NUM_THREADS = 100
 
 # Maximum time the program is allowed to run (in seconds)
-runtime = 10800
+runtime = 150  # 10800
 
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time

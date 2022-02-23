@@ -29,6 +29,10 @@ class Classification:
     rows the clouds and the cells the probabilities for each one.
 
         Attributes:
+            type_columns:
+            A list of names of the cloud types. These are the columns in the
+            dataframe returned by Classification.evaluate.
+
             __scaler:
             A scikit-learn standard scaler used for standardizing the
             parameters of the clouds. It is preconfigured saved in the
