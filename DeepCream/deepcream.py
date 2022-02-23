@@ -114,8 +114,8 @@ class DeepCream:
             except Exception as e:
                 logger.error('Camera not configured: ', str(e))
                 raise ValueError('Camera not configured')
-            else:
-                self.camera = None
+        else:
+            self.camera = None
         self.capture_resolution = capture_resolution
 
         self.cloud_detection = CloudDetection(tpu_support=tpu_support)
@@ -308,7 +308,7 @@ class DeepCream:
 
     @thread('get_orig')
     def __get_orig(self):
-        if self.camera:
+        if self.camera is not None:
             orig = np.empty(
                 (self.capture_resolution[1], self.capture_resolution[0], 3),
                 dtype=np.uint8)
