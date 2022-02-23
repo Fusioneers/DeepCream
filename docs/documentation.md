@@ -115,7 +115,3 @@ The main.py is comparatively simple as it just needs to instance the DeepCream
 module and start it. It does this in a while loop so that the program is
 guaranteed to run the full three hours. In the case of an error it catches any
 exceptions and logs them. After that it reinitialized the DeepCream model.
-
-Note: Since the program uses multiple threads the individual threads might and
-will exceed the allowed runtime they are given. To counteract this we subtract
-two minutes off of this runtime to ensure the threads will finish in time.

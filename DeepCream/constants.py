@@ -99,3 +99,11 @@ TEMPERATURE_THRESHOLD = 95
 
 # The duration after a too high temperature the program is paused
 TEMPERATURE_SLEEP = 60
+
+# Maximum time the program is allowed to run (in seconds)
+runtime = 200  # 10800
+
+# Time the program is going to run shorter than the runtime to ensure it
+# finishes in time
+buffer = 120
+pi_camera = False

@@ -4,8 +4,14 @@ import time
 import traceback
 
 import DeepCream
-from DeepCream.constants import ABS_PATH, DEFAULT_DELAY, TEMPERATURE_THRESHOLD, \
-    TEMPERATURE_SLEEP
+from DeepCream.constants import (ABS_PATH,
+                                 DEFAULT_DELAY,
+                                 TEMPERATURE_THRESHOLD,
+                                 TEMPERATURE_SLEEP,
+                                 pi_camera,
+                                 runtime,
+                                 buffer,
+                                 )
 from DeepCream.database import DataBase
 
 # Gets the current time as start time
@@ -13,9 +19,6 @@ start_time = time.time()
 
 logger = logging.getLogger('DeepCream.main')
 finished = False
-runtime = 200  # 10800  # Maximum time the program is allowed to run (in seconds)
-buffer = 120  # Time the program is going to run shorter than the runtime to ensure it finishes in time
-pi_camera = False
 
 cpu = None
 
@@ -47,8 +50,8 @@ def create_deepcream() -> DeepCream.deepcream.DeepCream:
 # Instances DeepCream for the first time
 deepcream = create_deepcream()
 
-# Keeps DeepCream alive as long as the three hours aren't over and the DeepCream module hasn't
-# finished
+# Keeps DeepCream alive as long as the three hours aren't over and the
+# DeepCream module hasn't finished
 while time.time() - start_time < runtime and not finished:
     time.sleep(DEFAULT_DELAY)
 
@@ -121,8 +124,5 @@ while time.time() - start_time < runtime and not finished:
 end_time = time.time()
 
 # Prints out and logs the overall execution time of the program
-# Note: As mentioned in the documentation.md the threads might still be running at
-# this point, but they are sure to run out before the 2 minutes of buffer are
-# over
 logger.info(f'Overall execution time: {int(end_time - start_time)}s')
 print(f'Overall execution time: {int(end_time - start_time)}s')
