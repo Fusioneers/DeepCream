@@ -63,15 +63,15 @@ def thread(name: str) -> Callable:
 
         def __init__(self, deepcream, name, time):
             self.deepcream = deepcream
+            self.exit = False
             self.name = name
             self.time = time
-            self.exit = False
 
         def __enter__(self):
-            self.th = th.Thread(target=self.callme, daemon=True)
+            self.th = th.Thread(target=self.timer, daemon=True)
             self.th.start()
 
-        def callme(self):
+        def timer(self):
             dtime = t.time()
             while t.time() - dtime < self.time / 2 and not self.exit:
                 t.sleep(0.01)

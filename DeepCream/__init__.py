@@ -5,8 +5,8 @@ from DeepCream.constants import (LOG_DIR,
                                  DEBUG_LOG_PATH,
                                  INFO_LOG_PATH,
                                  CONSOLE_LOGGING_LEVEL,
-                                 FILE_LOGGING_FORMAT,
-                                 CONSOLE_LOGGING_FORMAT,
+                                 EXTENDED_LOGGING_FORMAT,
+                                 SHORT_LOGGING_FORMAT,
                                  )
 from DeepCream.deepcream import DeepCream as DeepCreamClass
 
@@ -24,15 +24,15 @@ logger.setLevel(logging.DEBUG)
 
 debug_file_handler = logging.FileHandler(DEBUG_LOG_PATH)
 debug_file_handler.setLevel(logging.DEBUG)
-debug_file_handler.setFormatter(logging.Formatter(FILE_LOGGING_FORMAT))
+debug_file_handler.setFormatter(logging.Formatter(EXTENDED_LOGGING_FORMAT))
 
 info_file_handler = logging.FileHandler(INFO_LOG_PATH)
 info_file_handler.setLevel(logging.INFO)
-info_file_handler.setFormatter(logging.Formatter(CONSOLE_LOGGING_FORMAT))
+info_file_handler.setFormatter(logging.Formatter(SHORT_LOGGING_FORMAT))
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(CONSOLE_LOGGING_LEVEL)
-console_handler.setFormatter(logging.Formatter(CONSOLE_LOGGING_FORMAT))
+console_handler.setFormatter(logging.Formatter(SHORT_LOGGING_FORMAT))
 
 logger.addHandler(debug_file_handler)
 logger.addHandler(info_file_handler)

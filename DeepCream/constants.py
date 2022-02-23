@@ -7,7 +7,7 @@ DEBUG_MODE = True
 # The path to the repository root i.e. .../DeepCream
 ABS_PATH = os.path.dirname(os.path.normpath(os.path.dirname(__file__)))
 
-# The time format used by log files
+# The time format used in the modules
 TIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 
 
@@ -17,13 +17,13 @@ def get_time() -> str:
 
 
 # The detailed logging format as used in DEBUG log
-FILE_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
-                      '%(funcName)s: line %(lineno)d: %(levelname)s: ' \
-                      '%(message)s'
+EXTENDED_LOGGING_FORMAT = '%(asctime)s: %(name)s: thread %(threadName)s: ' \
+                          '%(funcName)s: line %(lineno)d: %(levelname)s: ' \
+                          '%(message)s'
 
 # A more concise logging format for the console or the INFO log
-CONSOLE_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
-                         'message)s '
+SHORT_LOGGING_FORMAT = '%(name)s: line %(lineno)d: %(levelname)s: %(' \
+                       'message)s '
 
 CONSOLE_LOGGING_LEVEL = logging.DEBUG
 
@@ -39,7 +39,7 @@ DEFAULT_STEP_LEN = 2
 DEFAULT_BORDER_WIDTH = 50
 DEFAULT_VAL_THRESHOLD = 30
 
-# This is the quality portion used in the database free space procedure
+# This is the quality portion used in the database free_space procedure
 QUALITY_THRESHOLD = 0.15
 
 # The maximum size for the database
@@ -68,10 +68,10 @@ analysis_features = ['center x',
                      'sharp edges']
 
 # The maximum queue size in DeepCream. A too high value causes a memory
-# overflow
+# overflow.
 QUEUE_MAX_SIZE = 5
 
-# A default delay used in the delay_supervisor and the main thread
+# The delay used in the delay_supervisor and the main thread
 DEFAULT_DELAY = 0.5
 
 # The maximum time a single execution of a function in a thread is allowed to
@@ -91,10 +91,11 @@ ORIG_PRIORITISATION_ERROR_PENALTY = 20
 # The amount per second by which the orig_priority returns to normal.
 ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 0.5 * DEFAULT_DELAY
 
-# The temperature after which the program is paused
+# The temperature threshold above which the program is paused
 TEMPERATURE_THRESHOLD = 95
 
-# The duration the program is paused after a too high temperature occurred
+# The duration in seconds the program is paused after a too high temperature
+# occurred
 TEMPERATURE_SLEEP = 60
 
 # Maximum time the program is allowed to run (in seconds)
