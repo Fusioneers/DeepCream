@@ -96,19 +96,20 @@ not fully analysed. Below you can see a flow chart of this algorithm:
 ![](storage_management/storage_management_algorithm.png)
 
 Everytime an image is to be saved, the remaining space is checked. If there is
-not enough space to store the image, then the free_space method takes place.
-When there are any not deleted images, then the ration of the already
-compressed images to the not compressed nor deleted ones is determined. This
-ensures that the images, for which the classification and pareidolia are very
-confident, are not compressed unless there is no other choice. If 85% are
-compressed, then the image with the lowest quality is deleted, otherwise
-deleted. If there are no not deleted images with a quality, but there are
-images without, then a signal i.e. an error is raised which urges the program
-to slow the taking of images down until more qualities are computed. In the
-unlikely scenario, that the csv's and masks use more space than 3GB, the
-program is stopped.
+not enough space to store the image, then the free_space method takes place. If
+there are any not deleted images, then the ration of the already compressed
+images to the not compressed nor deleted ones is determined. This ensures that
+the images, for which the classification and pareidolia are very confident, are
+not compressed unless there is no other choice. If 85% are compressed, then the
+image with the lowest quality is deleted, otherwise deleted. If there are no
+not deleted images with a quality, but there are images without, then a signal
+i.e. an error is raised which urges the program to slow the taking of images
+down until more qualities are computed. In the unlikely scenario, that the
+csv's and masks use more space than 3GB, the program is stopped.
 
-## main.py
+## DeepCream
+
+## Main
 
 The main.py is comparatively simple as it just needs to instance the DeepCream
 module and start it. It does this in a while loop so that the program is
