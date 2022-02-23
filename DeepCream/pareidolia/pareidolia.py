@@ -15,15 +15,14 @@ logger = logging.getLogger('DeepCream.pareidolia')
 class Pareidolia:
     def __init__(self, tpu_support: bool = False):
 
-        """
-
-        This class is responsible for simulating the pareidolia effect on the cloud images.
+        """This class is responsible for simulating the pareidolia effect on
+        the cloud images.
 
         Args:
             tpu_support:
             Whether the system supports a tpu. If true the cloud detection
-            will use the edgetpu library from pycoral.utils, otherwise it will use
-            keras to load the model. (False by default)
+            will use the edgetpu library from pycoral.utils, otherwise it will
+            use keras to load the model. (False by default)
 
         """
 
@@ -66,9 +65,7 @@ class Pareidolia:
 
     def __load_image(self, image: np.ndarray) -> np.ndarray:
 
-        """
-
-        This function is responsible for preparing the image to
+        """This function is responsible for preparing the image to
         be used as input for the AI.
 
         Args:
@@ -77,7 +74,8 @@ class Pareidolia:
 
         Returns:
             normal:
-            The image in RGB format as numpy array resized to self.WIDTH and self.HEIGHT.
+            The image in RGB format as numpy array resized to self.WIDTH and
+            self.HEIGHT.
 
         """
 
@@ -94,9 +92,8 @@ class Pareidolia:
 
     def __ai_generate_pareidolia_idea(self, image: np.ndarray):
 
-        """
-
-        This function generates an array with all the probabilities for each label.
+        """This function generates an array with all the probabilities for each
+        label.
 
         Args:
             image:
@@ -104,9 +101,10 @@ class Pareidolia:
             self.WIDTH, self.HEIGHT.
 
         Returns:
-            An array with the same length and order as the labels.txt in the models/keras and models/tflite
-            folders. Each value in the array corresponds to the probability of the cloud image having that label.
-            The sum of the probabilities should always give 1.
+            An array with the same length and order as the labels.txt in the
+            models/keras and models/tflite folders. Each value in the array
+            corresponds to the probability of the cloud image having that
+            label. The sum of the probabilities should always give 1.
 
         """
 
@@ -123,17 +121,18 @@ class Pareidolia:
 
     def __evaluate_image(self, image: np.ndarray) -> str:
 
-        """
-
-        This function combines the functions above to compute the results for an image only containing 1 cloud.
+        """This function combines the functions above to compute the results
+        for an image only containing 1 cloud.
 
         Args:
             image:
             The image in RGB format as numpy array with any dimensions.
 
         Returns:
-            An array with the same length and order as the labels.txt in the models/keras and models/tflite
-            folders. Each value in the array corresponds to the probability of the cloud image having that label.
+            An array with the same length and order as the labels.txt in the
+            models/keras and models/tflite folders. Each value in the array
+            corresponds to the probability of the cloud image having that
+            label.
 
         """
 
@@ -155,14 +154,14 @@ class Pareidolia:
 
     def evaluate_clouds(self, clouds: List[np.ndarray]) -> pd.DataFrame:
 
-        """
-
-        This is the only public function of the class and its job is to
-        call the functions above to compute the probabilities for a list of clouds.
+        """This is the only public function of the class and its job is to
+        call the functions above to compute the probabilities for a list of
+        clouds.
 
         Args:
             clouds:
-            An array of image in RGB format as numpy array with any dimensions, each only containing 1 cloud.
+            An array of image in RGB format as numpy array with any dimensions,
+             each only containing 1 cloud.
 
         Returns:
             A pd.DataFrame with the results to be saved as csv.
@@ -178,8 +177,9 @@ class Pareidolia:
         for cloud in clouds:
             probabilities.append(self.__evaluate_image(cloud))
 
-        # Writes the probabilities to a data frame in which the labels are the clouds and the probabilities are the
-        # values of the individual clouds (rows).
+        # Writes the probabilities to a data frame in which the labels are the
+        # clouds and the probabilities are the values of the individual clouds
+        # (rows).
         pareidolia = pd.DataFrame(columns=[self.labels[str(i)]
                                            for i in range(len(self.labels))],
                                   data=probabilities)
