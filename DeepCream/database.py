@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import sys
-import traceback
 from typing import Union
 
 import cv2 as cv
@@ -301,28 +300,41 @@ class DataBase:
         """Frees up an identifier. See the documentation for the algorithm."""
 
         logger.debug('Attempting to free up space')
+
+        # This list contains all identifiers which are not deleted and have a
+        # quality.
         not_deleted = [key for key, value in self.metadata['data'].items() if
                        value['quality'] and not value['deleted']]
 
         if not not_deleted:
             no_quality = [key for key, value in self.metadata['data'].items()
                           if not value['deleted']]
+            # In case this list is empty, it is checked, whether there are any
+            # images, which are not deleted.
             if no_quality:
+                # If it is true, then a signal is sent to deepcream to
+                # prioritise the analysing of the images.
                 raise DataBase.OrigPrioritisationError('There are too many '
                                                        'origs without quality')
             else:
+                # If the masks and csv's take up so much space, then the
+                # program is stopped.
                 raise DataBase.DataBaseFullError(
                     'There are no not yet deleted images '
                     'available')
 
+        # A list containing all identifiers which are neither deleted nor
+        # compressed and have a quality
         not_compressed = list(
             filter(lambda x: not self.__get_param(x, 'compressed'),
                    not_deleted))
 
         num_not_compressed = len(not_compressed)
-        num_not_deleted = len(self.metadata['data']) \
-                          - self.metadata['metadata']['num deleted images']
+        num_not_deleted = len(not_deleted)
 
+        # if there are any not compressed and not deleted images with a
+        # quality and the ratio between those images and the compressed ones
+        # is higher than a threshold, the worst image is compressed.
         if not_compressed and \
                 num_not_compressed / num_not_deleted > QUALITY_THRESHOLD:
             qualities = list(map(lambda x: self.__get_param(x, 'quality'),
@@ -332,6 +344,8 @@ class DataBase:
 
             self.__compress_orig(worst_img)
         else:
+            # In the case that most of the images are compressed, the worst
+            # image is deleted.
             compressed = list(
                 filter(lambda x: self.__get_param(x, 'compressed'),
                        not_deleted))

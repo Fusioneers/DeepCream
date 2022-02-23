@@ -39,7 +39,7 @@ DEFAULT_STEP_LEN = 2
 DEFAULT_BORDER_WIDTH = 50
 DEFAULT_VAL_THRESHOLD = 30
 
-# This is the upper quality portion used in the database free space procedure
+# This is the quality portion used in the database free space procedure
 QUALITY_THRESHOLD = 0.15
 
 # The maximum size for the database
@@ -86,7 +86,7 @@ NIGHT_IMAGE_PRIORITY = -10
 
 # If the OrigPrioritisationError is raised, the orig_priority is reduced by
 # this amount.
-ORIG_PRIORITISATION_ERROR_PENALTY = 10
+ORIG_PRIORITISATION_ERROR_PENALTY = 20
 
 # The amount per second by which the orig_priority returns to normal.
 ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 0.5 * DEFAULT_DELAY
@@ -98,7 +98,7 @@ TEMPERATURE_THRESHOLD = 95
 TEMPERATURE_SLEEP = 60
 
 # Maximum time the program is allowed to run (in seconds)
-runtime = 2000  # 10800
+runtime = 10800
 
 # Time the program is going to run shorter than the runtime to ensure it
 # finishes in time

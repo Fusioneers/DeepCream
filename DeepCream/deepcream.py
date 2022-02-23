@@ -424,6 +424,8 @@ class DeepCream:
                                'to adjust delays')
                 self.orig_priority = NIGHT_IMAGE_PRIORITY
 
+        logger.info('Started thread delay_supervisor')
+
         while self.alive:
             try:
                 t.sleep(DEFAULT_DELAY)
@@ -452,6 +454,7 @@ class DeepCream:
         # at the same time, the connection is closed when the instance exits.
         if self.camera is not None:
             self.camera.close()
+        logger.info('Finished thread delay_supervisor')
 
     @thread('get_orig')
     def __get_orig(self):
