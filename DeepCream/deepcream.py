@@ -517,7 +517,7 @@ class DeepCream:
                 with self.lock:
                     self.database.save_orig(orig)
             except DataBase.OrigPrioritisationError as e:
-                logger.error(e)
+                logger.warning(e)
                 self.orig_priority -= ORIG_PRIORITISATION_ERROR_PENALTY
 
     @thread('get_mask')

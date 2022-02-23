@@ -1,4 +1,4 @@
-"""Module containing a class to identify the type of a given cloud
+"""Module containing a class to identify the type of a given cloud.
 
 This module contains the class Classification which is initialised at the
 beginning of the program. It returns a pandas DataFrame which contains the
@@ -20,9 +20,9 @@ logger = logging.getLogger('DeepCream.classification')
 
 
 class Classification:
-    """A class to determine the type of a cloud
+    """A class to determine the type of a cloud.
 
-    First the class has to be initialised. This must only happen once.
+    First the class has to be initialised. This has to happen only once.
     Then the method Classification.evaluate takes a dataframe of cloud
     parameters as input (the one returned by Analysis.evaluate) and returns
     another dataframe with the columns being the different types of clouds, the
@@ -31,7 +31,8 @@ class Classification:
         Attributes:
             __scaler:
             A scikit-learn standard scaler used for standardizing the
-            parameters of the clouds.
+            parameters of the clouds. It is preconfigured saved in the
+            standard_scaler.bin file.
     """
     type_columns = []
     for group_name, group_ in CLOUD_TYPES.items():
@@ -75,7 +76,7 @@ class Classification:
 
     def __iter_over_types(self, cloud: np.ndarray) -> List[float]:
         """Method for calling the method __check_type for each cloud type and
-        aggregating the results
+        aggregating the results.
 
         This method iterates over all subtypes in CLOUD_TYPES and appends the
         resulting error to a list. Then to this list the functions e^-x is
@@ -105,7 +106,7 @@ class Classification:
         return list(probabilities)
 
     def __check_type(self, cloud_type: dict, cloud: np.array) -> float:
-        """A method for comparing a cloud against a cloud type
+        """A method for comparing a cloud against a cloud type.
 
         This method determines how well a cloud fits to a cloud type. Note that
         properties of a cloud are not considered if the cloud type does not
