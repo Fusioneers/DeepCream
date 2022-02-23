@@ -28,7 +28,7 @@ Through this unexpected success the AI became so good that it rendered the HSV
 analysis basically useless, which allowed us to cut it from the cloud detection
 module, reducing the processing time per image by over 70%!
 
-![](cloud detection/unet-model.png)
+![](cloud_detection/unet-model.png)
 Source: https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/
 
 ## Scientific application
