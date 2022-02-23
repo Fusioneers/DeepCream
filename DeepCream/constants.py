@@ -76,19 +76,19 @@ DEFAULT_DELAY = 0.5
 
 # The maximum time a single execution of a function in a thread is allowed to
 # last, after which DeepCream is restarted
-MAX_TIME = 20
+MAX_TIME = 60
 
 # This is the number of invalid images after which the night mode takes place.
 INVALID_ORIG_COUNT_THRESHOLD = 10
 
 # The orig_priority at night
-NIGHT_IMAGE_PRIORITY = -4
+NIGHT_IMAGE_PRIORITY = -10
 
 # If the OrigPrioritisationError is raised, the orig_priority is reduced by
 # this amount.
-ORIG_PRIORITISATION_ERROR_PENALTY = 4
+ORIG_PRIORITISATION_ERROR_PENALTY = 10
 
-# The amount per second of which the orig_priority normalises again
+# The amount per second by which the orig_priority returns to normal.
 ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE = 0.5 * DEFAULT_DELAY
 
 # The temperature after which the program is paused

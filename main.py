@@ -113,10 +113,8 @@ while time.time() - start_time < runtime and not finished:
             if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
                 logger.warning(f'Restarting DeepCream')
                 deepcream.alive = False
-        if num_threads > MAX_NUM_THREADS / 2:
+        if num_threads > MAX_NUM_THREADS * 0.75:
             logger.warning(f'There are a lot of threads: {num_threads}')
-        else:
-            logger.debug(f'Number of threads: {num_threads}')
 
     except DataBase.DataBaseFullError as err:
         # If the program runs out of memory (because the 3GB are reached) the

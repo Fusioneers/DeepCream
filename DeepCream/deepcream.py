@@ -344,10 +344,16 @@ class DeepCream:
         masks. An instability is not desired because every image needs to
         undergo all threads and unclassified images do more harm than good.
         The delay_supervisor adds and updates delays to the threads so that
-        the overall frequency of the threads is the same. This mechanism is
-        paused if the orig_priority is below 0. In this case the
-        delay_supervisor sets the get_orig, review_orig and save_orig delays
-        to orig_priority ** 2, and the other delays to 0.
+        the overall frequency of the threads is the same. This is done by
+        adding the difference between the duration of each thread and the
+        maximum duration of all threads as a delay to each thread.
+
+        In the case that the orig_priority is below 0, the delay_supervisor
+        sets the get_orig, review_orig and save_orig delays to -orig_priority.
+
+        If there are a lot of consecutive invalid images, the delay_supervisor
+        sets the orig_priority to NIGHT_IMAGE_PRIORITY.
+
         """
 
         def get_max_duration():
@@ -418,6 +424,8 @@ class DeepCream:
                 with self.lock:
                     logger.critical(traceback.format_exc())
                     self.alive = False
+                    if self.camera is not None:
+                        self.camera.close()
                     return
             except BaseException as e:
                 with self.lock:
@@ -444,7 +452,13 @@ class DeepCream:
 
     @thread('review_orig')
     def __review_orig(self):
-        """This thread """
+        """This thread reviews each image and determines whether it is usable.
+
+        Every image has to pass this thread before being saved or processed
+        further. It determines whether the image could be taken at night and
+        therefore not useful. If this happens a lot, then the thread supervisor
+        lowers the orig_priority (see its documentation for more details).
+        """
 
         if not self.orig_review_queue.empty():
             logger.debug('Reviewing orig image')
@@ -469,6 +483,8 @@ class DeepCream:
 
     @thread('save_orig')
     def __save_orig(self):
+        """Saves the images reviewed by the review_orig thread."""
+
         if not self.orig_queue.empty():
             orig = self.orig_queue.get()
             try:
@@ -480,6 +496,12 @@ class DeepCream:
 
     @thread('get_mask')
     def __get_mask(self):
+        """This thread generates the masks to detect the clouds.
+
+        If there are no clouds on the image, then the deletion procedure is
+        called on the image.
+        """
+
         with self.lock:
             identifier = self.database.load_id('orig creation time',
                                                'created mask')
@@ -498,6 +520,8 @@ class DeepCream:
 
     @thread('save_mask')
     def __save_mask(self):
+        """This thread saves the masks created by get_mask."""
+
         if not self.mask_queue.empty():
             mask, identifier = self.mask_queue.get()
             with self.lock:
@@ -506,6 +530,13 @@ class DeepCream:
 
     @thread('get_analysis_pareidolia')
     def __get_analysis_pareidolia(self):
+        """This thread generates the analysis and the pareidolia of an image.
+
+        It creates the analysis. If all clouds are determined invalid by it,
+        then the deletion procedure is called. Otherwise, the analysis and the
+        then created pareidolia are put into their respective queues.
+        """
+
         with self.lock:
             identifier = self.database.load_id('created mask',
                                                'created analysis')
@@ -540,6 +571,8 @@ class DeepCream:
 
     @thread('save_analysis')
     def __save_analysis(self):
+        """Saves the analysis."""
+
         if not self.analysis_queue.empty():
             analysis, identifier = self.analysis_queue.get()
             with self.lock:
@@ -547,6 +580,8 @@ class DeepCream:
 
     @thread('save_pareidolia')
     def __save_pareidolia(self):
+        """Saves the pareidolia."""
+
         if not self.pareidolia_queue.empty():
             pareidolia, identifier = self.pareidolia_queue.get()
             with self.lock:
@@ -554,6 +589,8 @@ class DeepCream:
 
     @thread('get_classification')
     def __get_classification(self):
+        """Gets the classification."""
+
         with self.lock:
             identifier = self.database.load_id('created analysis',
                                                'created classification')
@@ -566,6 +603,8 @@ class DeepCream:
 
     @thread('save_classification')
     def __save_classification(self):
+        """Saves the classification."""
+
         if not self.classification_queue.empty():
             classification, identifier = self.classification_queue.get()
             with self.lock:
