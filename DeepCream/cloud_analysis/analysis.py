@@ -521,6 +521,7 @@ class Analysis:
             perp_vec = np.roll(appr_vec, 1, axis=1)
             perp_vec[:, 0] *= -1
 
+            # Computes the spans
             span_range = np.arange(-in_steps, out_steps + 1)[:, np.newaxis]
             spans = [np.matmul(span_range, vec[np.newaxis]) + contour[n]
                      for n, vec in enumerate(perp_vec)]

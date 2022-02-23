@@ -15,6 +15,10 @@ if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
 # Start logging as soon as the DeepCream module is initialized
+# There are 2 separate log files: the DEBUG... and the INFO... one.
+# The DEBUG contains extensive information about all steps done by the program
+# In the INFO the debug statements are missing and the format for each line is
+# shorter to gain a quick overview of the runtime.
 logger = logging.getLogger('DeepCream')
 logger.setLevel(logging.DEBUG)
 
@@ -35,20 +39,3 @@ logger.addHandler(info_file_handler)
 logger.addHandler(console_handler)
 
 logger.info('Initialised logger')
-
-
-# This function just makes it more convenient to initialize the DeepCream class
-def create_deepcream(directory,
-                     tpu_support: bool = False,
-                     pi_camera: bool = False,
-                     capture_resolution=(2592, 1952)) -> DeepCreamClass:
-    """Creates and starts a new DeepCream instance"""
-    new_deepcream = DeepCreamClass(directory, tpu_support, pi_camera,
-                                   capture_resolution)
-
-    logger.info('Initialised DeepCream')
-
-    new_deepcream.run()
-    logger.info('Started DeepCream')
-
-    return new_deepcream
