@@ -1,4 +1,5 @@
-""""""
+"""A module containing a class DeepCream which manages threads to gain data
+based on the camera in the Astro Pi. """
 
 import logging
 import os
@@ -7,6 +8,7 @@ import threading as th
 import time as t
 import traceback
 from queue import Queue
+from typing import Callable
 
 import cv2 as cv
 import numpy as np
@@ -34,8 +36,26 @@ max_num_clouds = 15
 max_border_proportion = 1
 
 
-def thread(name: str):
+def thread(name: str) -> Callable:
+    """A decorator factory for the threads used in the DeepCream class.
+
+    This decorator runs the given function in a while loop, ensures that it
+    stops if DeepCream is not alive and catches exceptions. It also sets
+    DeepCream.alive to false if a function takes too long. Every iteration
+    consists of a delay and an execution of the given function. The delay
+    mechanism is explained in the delay_supervisor thread.
+
+    Args:
+        name:
+        The name of the function to decorate e.g. 'save_orig'.
+
+    Returns:
+        A decorator for threads.
+    """
+
     class timeout:
+        """This class supervises the time a function takes to execute."""
+
         def __init__(self, deepcream, name, time):
             self.deepcream = deepcream
             self.name = name
@@ -65,7 +85,9 @@ def thread(name: str):
                         func(self, *args, **kwargs)
                     setattr(self, f'_DeepCream__duration_{name}',
                             (t.time() - dtime))
-                except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+                except (DataBase.DataBaseFullError, SystemExit,
+                        KeyboardInterrupt) as e:
+                    # In case of a critical error, DeepCream is stopped
                     with self.lock:
                         logger.critical(traceback.format_exc())
                         self.alive = False
@@ -81,8 +103,102 @@ def thread(name: str):
 
 
 class DeepCream:
+    """A class to manage threads to retrieve and evaluate images from the
+    camera.
+
+    This class initialises a database and multiple threads which run each
+    different parts of the program e.g. the taking of images or the saving of
+    the classification.
+
+    Attributes:
+        directory:
+        The directory in which the database is stored.
+
+        database:
+        The database where the results are stored.
+
+        alive:
+        A flag which indicates whether the current DeepCream is still 'alive'.
+        During runtime, it is set to True. If it is set to False, all threads
+        have time to finish their current cycle and stop then. This can happen
+        if a critical error is encountered, the time is up or a function takes
+        too long to complete.
+
+        orig_priority:
+        The priority of taking images. A value of 0 means no specific trend.
+        A high value urges the program to take more pictures, negative values
+        slow that down. More specifically, if it is below 0, the delay of
+        get_orig is set to orig_priority ** 2. If it is below 0, the penalty
+        decays over time.
+
+        invalid_orig_rate:
+        An indicator for nighttime. Everytime an image is classified as invalid
+        by the review_orig thread, this value goes up by 1, and otherwise
+        decreases by 1 down to 0. If it reaches a threshold, the orig_priority
+        is set to a negative constant so that more images are analysed.
+        If there are more valid images the orig_priority rises again.
+
+        camera:
+        The camera connected to the pi.
+
+        capture_resolution:
+        The resolution of the images taken by the camera.
+
+        cloud_detection:
+        The cloud detection instance used by the program.
+
+        classification:
+        The classification instance used by the program.
+
+        pareidolia:
+        The pareidolia instance used by the program.
+
+        lock:
+        A threading lock to ensure that some operations are not interrupted by
+        the threading mechanism. This is used for database access and some
+        logging.
+
+        ...queue:
+        These are queues to communicate between threads. Every output by a
+        producer thread (get_orig, orig_review, get_mask,
+        get_analysis_pareidolia and get_classification) is sent into one of
+        the queues. The objects in the queues are then taken one by one from on
+        of the consumer threads (review_orig, save_orig, save_mask,
+        save_analysis, save_pareidolia and save_classification) and processed
+        further or saved into the database.
+
+        ...th...:
+        The thread objects used by the program. The threads are explained more
+        detailed in their respective functions.
+
+        ...delay...:
+        The amount of time each function waits before each execution.
+
+        ...duration...:
+        The amount of time each execution in the threads took the last time.
+
+    """
+
     def __init__(self, directory: str, tpu_support: bool = False,
                  pi_camera: bool = False, capture_resolution=(2592, 1952)):
+        """Initialises DeepCream.
+
+        Args:
+            directory:
+            The directory in which the database is stored.
+
+            tpu_support:
+            Whether a tpu is connected to the astro pi.
+
+            pi_camera:
+            Whether a camera is connected to the astro pi.
+
+            capture_resolution:
+            The resolution of the images taken by the camera. This has only an
+            effect if pi_camera is True.
+
+        """
+
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
@@ -95,9 +211,6 @@ class DeepCream:
 
         self.alive = True
 
-        # The priority of taking images. A value of 0 means no specific trend.
-        # A high value urges the program to take more pictures, negative values
-        # slow that down.
         self.orig_priority = 0
 
         self.invalid_orig_rate = 0
@@ -108,7 +221,9 @@ class DeepCream:
                 self.camera = PiCamera()
                 self.camera.resolution = capture_resolution
                 self.camera.framerate = 15
-            except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+            except (
+                    DataBase.DataBaseFullError, SystemExit,
+                    KeyboardInterrupt) as e:
                 logger.critical(e)
                 return
             except Exception as e:
@@ -197,9 +312,9 @@ class DeepCream:
         logger.info('Initialisation of DeepCream finished')
 
     def run(self):
-        logger.debug('Attempting to start running')
+        """Starts the threads."""
 
-        start_time = t.time()
+        logger.debug('Attempting to start running')
 
         self.__th_delay_supervisor.start()
 
@@ -217,6 +332,15 @@ class DeepCream:
         logger.debug('Started threads')
 
     def __delay_supervisor(self):
+        """Manages the delays of the threads.
+
+        Some executions in threads take longer than others. For example the
+        taking of images can happen way faster than the generation of the
+        masks. An instability is not desired because every image needs to
+        undergo all threads and unclassified images do more harm than good.
+        The delay_supervisor adds and updates delay to the threads so that
+        the overall frequency of the threads is the same.
+        """
 
         def get_delay(start, end):
             start_delay = getattr(self, f'_DeepCream__delay_{start}')
@@ -270,10 +394,11 @@ class DeepCream:
 
         def check_orig_priority():
             if self.orig_priority < 0:
+                self.orig_priority += ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE
+
                 self.__delay_get_orig = self.orig_priority ** 2
                 self.__delay_review_orig = self.orig_priority ** 2
                 self.__delay_save_orig = self.orig_priority ** 2
-                self.__delay_get_mask = 0
                 self.__delay_save_mask = 0
                 self.__delay_get_analysis_pareidolia = 0
                 self.__delay_save_analysis = 0
@@ -283,7 +408,6 @@ class DeepCream:
                 logger.debug('Adjusted delays')
 
         def check_invalid_orig_count():
-            self.orig_priority += ORIG_PRIORITISATION_ERROR_COOLDOWN_RATE
             if self.invalid_orig_rate > INVALID_ORIG_COUNT_THRESHOLD:
                 logger.warning('There are a lot of invalid images, attempting '
                                'to adjust delays')
@@ -297,7 +421,13 @@ class DeepCream:
                 adjust_delays()
                 check_orig_priority()
                 check_invalid_orig_count()
-            except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
+
+                logger.debug(
+                    f'Current image taking frequency is '
+                    f'{1 / (self.__delay_get_orig + self.__duration_get_orig)}'
+                    f' images per second')
+            except (DataBase.DataBaseFullError, SystemExit,
+                    KeyboardInterrupt) as e:
                 with self.lock:
                     logger.critical(traceback.format_exc())
                     self.alive = False
