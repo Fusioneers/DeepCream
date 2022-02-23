@@ -33,28 +33,29 @@ Source: https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/
 
 ## Scientific application
 
-The scientific application is split into two distinct parts: The analysis, which
-separates the clouds on the provided image and computes a variety of properties for
-each one. The classification on the other hand part takes these features and computes how probable
-the different cloud types are for each of them.
+The scientific application is split into two distinct parts: The analysis,
+which separates the clouds on the provided image and computes a variety of
+properties for each one. The classification on the other hand part takes these
+features and computes how likely the different cloud types are for each of
+them.
 
 ### Cloud analysis
 
 The first part of the analysis consists of the separation of the clouds. These
 are mostly considered independent. The second part of the analysis identifies a
-couple of features that can indicate the type of the cloud.
-These features consist of shape based features, for example the elongation or the convexity,
+couple of features that can indicate the type of the cloud. These features
+consist of shape based features, for example the elongation or the convexity,
 and texture based features, like transparency and sharp edges.
 
 ### Classification
 
 At first, we thought about implementing a clustering algorithm to identify the
-different clouds. However, this would have had the disadvantages of consuming a lot of
-computation time and resulting in barely predictable results. So instead we
-computed the classification by comparing the properties gathered by the analysis
-against a couple of cloud types previously defined. This allows us to quickly
-customise and specify new cloud types and correct classification mistakes made
-by the program, while maintaining a high performance.
+different clouds. However, this would have had the disadvantages of consuming a
+lot of computation time and resulting in barely predictable results. So instead
+we computed the classification by comparing the properties gathered by the
+analysis against a couple of cloud types previously defined. This allows us to
+quickly customise and specify new cloud types and correct classification
+mistakes made by the program, while maintaining a high performance.
 
 ## Pareidolia
 
@@ -79,7 +80,7 @@ database was needed. At first, we wanted to implement a relational database
 because of the ease of sqlite3 in python, but then we quickly realized that a
 document based database would yield far better results. As systems like MongoDB
 are not installed on the ASTRO PI, we implemented a database ourselves. More
-concretely it is a wrapper around a folder structure described more detailed in
+concretely is it a wrapper around a folder structure described more detailed in
 the docstrings of the module. It handles all in- and output to the file system,
 allowing a concise interface in the other modules.
 
@@ -87,7 +88,7 @@ Because the allowed space of 3GB is not enough to store all images in full
 resolution, we implemented a smart algorithm to select images which are less
 relevant to our program and compress and delete them if necessary. The
 so-called quality determines how confident the algorithms are about an image
-(i.e. they are very sure that a cloud is of a specific type or looks very
+(i.e. if they are very sure that a cloud is of a specific type or looks very
 similar to a specific object). Note that only the original images taken by the
 camera are considered for compression or deletion. No output of the scientific
 or artistic approach is deleted, and no image is compressed or deleted which is
@@ -97,37 +98,46 @@ not fully analysed. Below you can see a flow chart of this algorithm:
 
 Everytime an image is to be saved, the remaining space is checked. If there is
 not enough space to store the image, then the free_space method takes place. If
-there are any not deleted images, then the ration of the already compressed
-images to the not compressed nor deleted ones is determined. This ensures that
-the images, for which the classification and pareidolia are very confident, are
-not compressed unless there is no other choice. If 85% are compressed, then the
-image with the lowest quality is deleted, otherwise deleted. If there are no
-not deleted images with a quality, but there are images without, then a signal
-i.e. an error is raised which urges the program to slow the taking of images
-down until more qualities are computed. In the unlikely scenario, that the
-csv files and masks use more space than 3GB, the program is stopped.
+there are any not deleted images, then the ratio of the already compressed
+images to the neither compressed nor deleted ones is determined. This ensures
+that the images, for which the classification and pareidolia are very
+confident, are not compressed unless there is no other choice. If 85% are
+compressed, then the image with the lowest quality is deleted, otherwise
+compressed. If there are no not deleted images with a quality, but images
+without, then a signal i.e. an error is raised which urges the program to slow
+the taking of images down until more qualities are computed. In the unlikely
+scenario, that the csv files and masks use more space than 3GB, the program is
+stopped.
 
 ## main.py and deepcream.py
 
-The main.py and the deepcream.py control the other modules and ensure a smooth execution.
-To be able to do so they monitor and limit the execution time as well as the CPU temperature
-and number of active threads. They make sure that both stay under a certain threshold. If the CPU temperature for 
-example get to hot, the program will make a 60s pause to cool it off. If the number of active threads
-ever got too big the program would stop them, restart and continue where it left off. This is only
-possible thanks to the elegant interplay between these modules and the database.
+The main.py and the deepcream.py control the other modules and ensure a smooth
+execution. To be able to do so they monitor and limit the execution time as
+well as the CPU temperature and number of active threads. They make sure that
+both stay under a certain threshold. If the CPU temperature for example gets to
+hot, the program will make a 60s pause to cool it off. If the number of active
+threads ever got too big the program would stop them, restart and continue
+where it left off. This is only possible thanks to the elegant interplay
+between these modules and the database.
 
-There are two small "issues" with aren't really problems but which should be noted:
-1. The threads don't necessarily stop with the end of the main program, however the runtime of
-the program accounts for this with a buffer which leads it to stopping 2 minutes earlier this is
-guaranteed to be enough time for the treads to stop since a single thread can only take up to 90s for
-execution anyway.
-2. In some very rare cases there might be an exception after the program which say something
-like "terminate called without an active exception". This, as extensive testing has shown, doesn't
-have any effects at all and can be ignored. We know that the threading is the origin of the "error" but we
-aren't really sure what's causing it
+There are two small "issues" wich aren't really problems but which should be
+noted:
 
-So to summarize the program will handle all exceptions, log them and if necessary restart the program. We've
-tested this in great detail and are confident the program will be able to fulfill its purpose with ease.
+1. The threads don't necessarily stop with the end of the main program, however
+   the runtime of the program accounts for this with a buffer which leads it to
+   stopping 2 minutes earlier this is guaranteed to be enough time for the
+   treads to stop since a single thread can only take up to 90s for execution
+   anyway.
+2. In some very rare cases there might be an exception after the program which
+   say something like "terminate called without an active exception". This, as
+   extensive testing has shown, doesn't have any effects at all and can be
+   ignored. We know that the threading is the origin of the "error" but we
+   aren't really sure what's causing it
 
-If you do have questions or remarks please don't hesitate to contact us, we will be happy to help:
+So to summarize the program will handle all exceptions, log them and if
+necessary restart the program. We've tested this in great detail and are
+confident the program will be able to fulfill its purpose with ease.
+
+If you do have questions or remarks please don't hesitate to contact us, we
+will be happy to help:
 [info@fusioneers.com](mailto:info@fusioneers.com)
