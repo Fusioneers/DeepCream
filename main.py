@@ -96,8 +96,8 @@ while time.time() - start_time < runtime and not finished:
                     deepcream.alive = False
                     time.sleep(TEMPERATURE_SLEEP)
                     logger.info('Starting DeepCream execution again')
-                    logger.info('CPU temperature: {cpu.temperature}C')
-                    deepcream.alive = True
+                    logger.info(f'CPU temperature: {cpu.temperature}C')
+                    deepcream = create_deepcream()
             elif cpu.temperature > 70:
                 logger.warning(
                     'CPU temperature {cpu.temperature}C is very high')
@@ -108,7 +108,7 @@ while time.time() - start_time < runtime and not finished:
 
         if num_threads > MAX_NUM_THREADS:
             logger.critical(
-                f'There are to many active threads: {num_threads}')
+                f'There are too many active threads: {num_threads}')
 
             if allowed_execution_time > 60 + TEMPERATURE_SLEEP:
                 logger.warning(f'Restarting DeepCream')
