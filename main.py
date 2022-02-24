@@ -91,9 +91,9 @@ while time.time() - start_time < allowed_execution_time and not finished:
                     logger.info('Starting DeepCream execution again')
                     logger.info(f'CPU temperature: {cpu.temperature}C')
                     deepcream = create_deepcream()
-            elif cpu.temperature > 70:
+            elif cpu.temperature > 80:
                 logger.warning(
-                    'CPU temperature {cpu.temperature}C is very high')
+                    f'CPU temperature {cpu.temperature}C is very high')
             else:
                 logger.debug(f'CPU temperature: {cpu.temperature}C')
 
