@@ -107,7 +107,7 @@ runtime = 10800
 buffer = 120
 
 # The directory where the database is saved
-directory = os.path.join(ABS_PATH, 'data', 'input')
+directory = os.path.join(ABS_PATH, 'database')
 
 # If this variable is true the program expects to have access to the
 # coral TPU accelerator
