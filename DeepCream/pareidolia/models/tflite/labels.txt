@@ -15,7 +15,7 @@
 14 chicken
 15 children
 16 chopper
-17 classic
+17 classic_car
 18 crown
 19 cup
 20 deer
@@ -41,7 +41,7 @@
 40 octopus
 41 pencil
 42 personal_car
-43 pocket
+43 pocket_watch
 44 rat
 45 ray
 46 sea_snake
