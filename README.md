@@ -79,7 +79,7 @@ More information can be found under [docs/documentation.md](docs/documentation.m
 
 This project is build to operate on a Raspberry Pi running ESA's Flight OS with **Python 3.7.3**.
 
-When running on a Raspberry Pi or similar device we recommend using a TPU.
+When running on a Raspberry Pi or similar device we recommend [using a TPU](#tpu-support).
 
 ### Python Interpreter
 
