@@ -12,7 +12,7 @@ Furthermore, we would like to point you to [our website](https://www.deepcream.e
 We are excited to announce that the first release of DeepCream is almost complete.
 We will be ready to launch by **23:59 CET** / **22:59 GMT** on **24th February 2022**.
 
-#### First successful tests
+#### First successful test
 
 A full 3-hour test suggests that DeepCream runs stably and produces meaningful results.
 We will conduct further tests to ensure that the application is prepared for all eventualities. 
