@@ -5,6 +5,8 @@ we would like to point out that the code is also available
 as a [GitHub repository](https://github.com/Fusioneers/DeepCream).
 Furthermore, we would like to point you to [our website](https://www.deepcream.eu/).
 
+If you have any problems, please contact us at <info@fusioneers.space>.
+
 ### Announcements
 
 #### Shooting for the stars
@@ -61,6 +63,9 @@ python3 main.py
 You can customize your copy of DeepCream by modifying the [DeepCream/constants.py](DeepCream/constants.py).
 For instance, you can turn TPU support on and off, customize file formats,
 change the location of your database or edit cooldown delays.
+
+Note that the GitHub version
+of [DeepCream/constants.py](DeepCream/constants.py) is configured for the Astro Pi competition.
 
 #### TPU support
 DeepCream supports for Edge TPUs from Coral.
