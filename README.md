@@ -7,14 +7,15 @@ Furthermore, we would like to point you to [our website](https://www.deepcream.e
 
 ### Announcements
 
-#### Almost done
+#### Shooting for the stars
 
 We are excited to announce that the first release of DeepCream is almost complete.
-We will be ready to launch by February 24, 2022.
+We will be ready to launch by **23:59 CET** / **22:59 GMT** on **24th February 2022**.
 
-#### Coming Soon
+#### First successful tests
 
-* More documentation improvements are planned.
+A full 3-hour test suggests that DeepCream runs stably and produces meaningful results.
+We will conduct further tests to ensure that the application is prepared for all eventualities. 
 
 ## Welcome to DeepCream, an Astro Pi 2022 project!
 
@@ -31,20 +32,23 @@ We find them all, we analyze them down to the smallest detail,
 and we interpret artistic forms into them.
 
 The interplay of three artificial intelligences, two of them being artificial neural networks,
-under control of the `main.py` enables DeepCream to perform these tasks efficiently.
+under control of the [`main.py`](main.py) enables DeepCream to perform these tasks efficiently.
 
-DeepCream is registered at the 2022 Astro Pi competition and has so far passed the first round.
-
+DeepCream is registered at the 2022 [Astro Pi competition](https://astro-pi.org/) and has so far passed the first round.
+Astro Pi is an ESA Education project run in collaboration with the Raspberry Pi Foundation.
 
 ### Getting started
 
 #### Installation
 
-When having [git](https://git-scm.com/) installed, you can easily clone DeepCream running this command:
+When having [git](https://git-scm.com/) installed, you can easily clone DeepCream running the following command in the
+directory where you want the application to be installed.
 
 ```bash
 git clone https://github.com/Fusioneers/DeepCream.git
 ```
+
+Otherwise, you can download the repository as a .zip file and extract it.
 
 #### Usage
 
