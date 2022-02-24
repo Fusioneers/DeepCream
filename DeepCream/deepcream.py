@@ -242,7 +242,7 @@ class DeepCream:
                 logger.critical(e)
                 return
             except Exception as e:
-                logger.error('Camera not configured: ', str(e))
+                logger.error(traceback.format_exc())
                 raise ValueError('Camera not configured')
         else:
             self.camera = None

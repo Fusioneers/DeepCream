@@ -33,7 +33,8 @@ if runs_on_pi:
     except (DataBase.DataBaseFullError, KeyboardInterrupt) as e:
         logger.critical(e)
     except Exception as e:
-        logger.error('CPU temperature not configured: ', str(e))
+        logger.error(traceback.format_exc())
+        logger.error('CPU temperature not configured')
 
 
 def create_deepcream() -> DeepCream:
