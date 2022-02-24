@@ -1,9 +1,9 @@
 # DeepCream
 
 **Note:** Since this project is intended to be submitted to the Astro Pi competition in the form of a .zip file,
-we would like to point out that the code is also available
-as a [GitHub repository](https://github.com/Fusioneers/DeepCream).
-Furthermore, we would like to point you to [our website](https://www.deepcream.eu/).
+we would like to point out that a [GitHub repository](https://github.com/Fusioneers/DeepCream) is available.
+We also invite you to visit [our website](https://www.deepcream.eu/), where you can find more information
+about our team and the work on the project.
 
 If you have any problems, please contact us at <info@fusioneers.space>.
 
