@@ -579,7 +579,7 @@ class DeepCream:
 
                 df = analysis.evaluate()
 
-                if not df.empty:
+                if df.empty:
                     logger.warning('There are no valid clouds on the image,'
                                    f' attempting to delete orig {identifier}')
                     self.database.delete_orig(identifier)
