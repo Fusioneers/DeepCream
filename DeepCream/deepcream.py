@@ -577,13 +577,14 @@ class DeepCream:
                 analysis = Analysis(orig, mask, max_num_clouds,
                                     max_border_proportion)
 
-                if not analysis.clouds:
+                df = analysis.evaluate()
+
+                if not df.empty:
                     logger.warning('There are no valid clouds on the image,'
                                    f' attempting to delete orig {identifier}')
                     self.database.delete_orig(identifier)
                     self.invalid_orig_rate += 1
 
-                df = analysis.evaluate()
                 self.analysis_queue.put((df, identifier))
 
                 masks = [np.tile(cloud.mask[:, :, np.newaxis], 3)
