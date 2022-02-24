@@ -221,8 +221,7 @@ class DeepCream:
         logger.debug('Attempting to initialise DeepCream')
         self.directory = directory
 
-        self.database = DataBase(
-            os.path.join(ABS_PATH, 'data', 'database'))
+        self.database = DataBase(self.directory)
 
         self.alive = True
 
