@@ -1,19 +1,15 @@
 import logging
-import os.path
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
 import tensorflow as tf
 from numpy import asarray
-from DeepCream.constants import ABS_PATH
 
 logger = logging.getLogger('DeepCream.cloud_detection')
 
 
 class CloudDetection:
-    def __init__(self, binary_cloud_threshold: float = 0.85,
-                 tpu_support: bool = False):
-
+    def __init__(self, binary_cloud_threshold: float = 0.85):
         """This class is responsible for filtering out the clouds of any given
         image.
 
@@ -22,12 +18,6 @@ class CloudDetection:
             The threshold (between 0 and 1) which determines if the pixel is
             part of a cloud. This value is used in evaluate_image after and
             applied to the AI generated mask. (0.85 by default)
-
-            tpu_support:
-            Whether the system supports a tpu. If true the cloud detection
-            will use the edgetpu library from pycoral.utils, otherwise it will
-            use keras to load the model. (False by default)
-
         """
 
         # Set thresholds for cloud detection
@@ -39,23 +29,9 @@ class CloudDetection:
         self.CHANNELS = 3
 
         # Load the machine learning model
-        if not tpu_support:
-            self.interpreter = None
-            self.model = tf.keras.models.load_model(os.path.join(ABS_PATH,
-                                                                 'DeepCream/cloud_detection/models/keras'))
-        else:
-            from pycoral.utils import edgetpu
-
-            self.model = None
-            self.interpreter = edgetpu.make_interpreter(
-                os.path.join(ABS_PATH, 'DeepCream/cloud_detection/models'
-                                       '/tflite/model.tflite'))
-            self.interpreter.allocate_tensors()
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
+        self.model = tf.keras.models.load_model('src/cloud_detection/models/keras')
 
     def __load_image(self, image: np.ndarray) -> np.ndarray:
-
         """This function is responsible for preparing the image to be used as
         input for the AI.
 
@@ -75,6 +51,7 @@ class CloudDetection:
         # Resizes the image
         scaled = ImageOps.fit(scaled, (self.WIDTH, self.HEIGHT),
                               Image.ANTIALIAS)
+
         # Converts it back to an array
         scaled = asarray(scaled)
         scaled = scaled.astype('float32')
@@ -84,7 +61,6 @@ class CloudDetection:
         return scaled
 
     def __ai_generate_image_mask(self, image: np.ndarray) -> np.ndarray:
-
         """This function generates an image mask based on the input image.
 
         Args:
@@ -103,17 +79,10 @@ class CloudDetection:
         if self.model is not None:
             mask = self.model.predict(np.asarray([image]))
             return mask[0]
-        elif self.interpreter is not None:
-            self.interpreter.set_tensor(
-                self.input_details[0]['index'], np.asarray([image]))
-            self.interpreter.invoke()
-            return \
-                self.interpreter.get_tensor(self.output_details[0]['index'])[0]
         else:
             raise ValueError('No AI was configured')
 
     def evaluate_image(self, image: np.ndarray) -> np.ndarray:
-
         """This is the only public function of the class and its job is to
         call the functions above to then return the mask.
 

@@ -1,7 +1,5 @@
-/.idea/
+# The folder with the images from the iss
 /data/
-/database/
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

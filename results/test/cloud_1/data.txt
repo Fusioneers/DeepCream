@@ -1,0 +1,21 @@
+center x                    324
+center y                    347
+contour perimeter    867.220343
+contour area             9388.0
+hull perimeter       471.302365
+hull area               14264.0
+roundness              0.531109
+convexity              0.543463
+solidity                0.65816
+rectangularity         0.545655
+elongation             0.599712
+mean r                 8.112971
+mean g                 6.572916
+mean b                 6.010511
+std r                 28.377516
+std g                 23.192111
+std b                 21.363483
+std                   24.311037
+transparency           8.802083
+sharp edges            0.680654
+Name: 1, dtype: object

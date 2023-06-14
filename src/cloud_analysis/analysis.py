@@ -26,11 +26,30 @@ import numpy as np
 import pandas as pd
 from typing import List
 
-from DeepCream.constants import (DEFAULT_STEP_LEN,
-                                 DEFAULT_APPR_DIST,
-                                 DEFAULT_BORDER_WIDTH,
-                                 DEFAULT_VAL_THRESHOLD,
-                                 analysis_features, )
+DEFAULT_APPR_DIST = 3
+DEFAULT_STEP_LEN = 2
+DEFAULT_BORDER_WIDTH = 50
+DEFAULT_VAL_THRESHOLD = 30
+analysis_features = ['center x',
+                     'center y',
+                     'contour perimeter',
+                     'contour area',
+                     'hull perimeter',
+                     'hull area',
+                     'roundness',
+                     'convexity',
+                     'solidity',
+                     'rectangularity',
+                     'elongation',
+                     'mean r',
+                     'mean g',
+                     'mean b',
+                     'std r',
+                     'std g',
+                     'std b',
+                     'std',
+                     'transparency',
+                     'sharp edges']
 
 logger = logging.getLogger('DeepCream.cloud_analysis.analysis')
 
@@ -395,14 +414,14 @@ class Analysis:
 
         def roundness(self) -> float:
             return (4 * np.pi * self.contour_area) / (
-                    self.hull_perimeter ** 2)
+                self.hull_perimeter ** 2)
 
         def convexity(self) -> float:
             return self.hull_perimeter / self.contour_perimeter
 
         def compactness(self) -> float:
             return (4 * np.pi * self.contour_area) / (
-                    self.contour_perimeter ** 2)
+                self.contour_perimeter ** 2)
 
         def solidity(self) -> float:
             return self.contour_area / self.hull_area
@@ -443,7 +462,7 @@ class Analysis:
             """
 
             sat = cv.cvtColor(self.img, cv.COLOR_RGB2HSV)[:, :, 0]
-            inverse = np.where(sat == 0, sat, 255 - sat)
+            inverse = np.where(sat == 0, sat, 255 - sat)  # type: ignore
             if np.count_nonzero(inverse) != 0:
                 out = np.sum(inverse) / np.count_nonzero(inverse)
             else:

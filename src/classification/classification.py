@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 from typing import List
 
-from DeepCream.classification.cloud_types import CLOUD_TYPES
-from DeepCream.constants import ABS_PATH, analysis_features
+from src.classification.cloud_types import CLOUD_TYPES
+from src.constants import ABS_PATH, analysis_features
 
 logger = logging.getLogger('DeepCream.classification')
 
@@ -109,7 +109,7 @@ class Classification:
 
         return list(probabilities)
 
-    def __check_type(self, cloud_type: dict, cloud: np.array) -> float:
+    def __check_type(self, cloud_type: dict, cloud: np.array) -> float:  # type: ignore
         """A method for comparing a cloud against a cloud type.
 
         This method determines how well a cloud fits to a cloud type. Note that
