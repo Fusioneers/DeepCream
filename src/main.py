@@ -5,7 +5,7 @@ from cloud_detection.cloud_detection import CloudDetection
 import numpy as np
 from pareidolia.pareidolia import Pareidolia
 
-INPUT_DIR = "data-test"
+INPUT_DIR = "data"
 
 def main():
 

@@ -1,5 +1,6 @@
-# The folder with the images from the iss
 /data/
+/results/
+/data-test/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
